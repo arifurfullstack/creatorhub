@@ -4,7 +4,7 @@ import dynamic from "next/dynamic";
 import "plyr/dist/plyr.css";
 
 // Dynamically import Plyr with SSR disabled to prevent hydration mismatch errors
-const Plyr = dynamic<any>(() => import("plyr-react").then((m: any) => m.default), { ssr: false });
+const Plyr = dynamic<any>(() => import("plyr-react").then((m: any) => m.Plyr), { ssr: false });
 
 interface VideoPlayerProps {
   src: string;
