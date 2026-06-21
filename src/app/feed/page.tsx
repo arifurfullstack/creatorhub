@@ -30,6 +30,21 @@ export default async function FeedPage() {
     },
   });
 
+  // Query top 3 recommended creators
+  const recommended = await prisma.creatorProfile.findMany({
+    take: 3,
+    include: {
+      user: {
+        select: {
+          image: true,
+        },
+      },
+    },
+    orderBy: {
+      followerCount: "desc",
+    },
+  });
+
   // Serialize models to plain JSON-compatible objects
   const serializedPosts = posts.map((post) => ({
     id: post.id,
@@ -56,9 +71,24 @@ export default async function FeedPage() {
     })),
   }));
 
+  const serializedRecommended = recommended.map((creator) => ({
+    id: creator.id,
+    username: creator.username,
+    displayName: creator.displayName,
+    isVerified: creator.isVerified,
+    bio: creator.bio || "",
+    user: {
+      image: creator.user.image,
+    },
+  }));
+
   return (
-    <div className="min-h-screen bg-[#09090b]">
-      <FeedClient initialPosts={serializedPosts} sessionUser={session?.user || null} />
+    <div className="min-h-screen bg-transparent">
+      <FeedClient
+        initialPosts={serializedPosts}
+        sessionUser={session?.user || null}
+        recommendedCreators={serializedRecommended}
+      />
     </div>
   );
 }

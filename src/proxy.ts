@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const path = request.nextUrl.pathname;
 
   // Define route lists
@@ -8,7 +8,8 @@ export async function middleware(request: NextRequest) {
   const isCreatorRoute = path.startsWith("/dashboard/creator");
   const isAdminRoute = path.startsWith("/dashboard/admin");
   const isModeratorRoute = path.startsWith("/dashboard/moderator");
-  const isProtectedRoute = path === "/feed" || path === "/messages" || path === "/settings" || isCreatorRoute || isAdminRoute || isModeratorRoute;
+  const isFanRoute = path.startsWith("/dashboard/fan");
+  const isProtectedRoute = path === "/feed" || path === "/messages" || path === "/settings" || isCreatorRoute || isAdminRoute || isModeratorRoute || isFanRoute;
 
   // Quick read cookie for session presence to avoid unnecessary fetch requests
   // Better Auth sessions usually set a cookie named "better-auth.session_token" or similar
@@ -68,7 +69,7 @@ export async function middleware(request: NextRequest) {
     }
 
   } catch (error) {
-    console.error("Middleware auth verification error:", error);
+    console.error("Middleware/Proxy auth verification error:", error);
     // On error, let it pass or redirect depending on safety
     if (isProtectedRoute) {
       return NextResponse.redirect(new URL("/auth/login", request.url));

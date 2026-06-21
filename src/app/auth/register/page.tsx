@@ -102,61 +102,49 @@ export default function RegisterPage() {
             </div>
           </div>
 
-          <div>
-            <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">
-              Full Name
-            </label>
-            <div className="relative">
-              <User className="absolute left-3 top-3.5 w-5 h-5 text-text-muted" />
-              <input
-                type="text"
-                required
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="John Doe"
-                className="w-full pl-10 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-all text-white placeholder-white/20"
-              />
-            </div>
+          <div className="floating-input-group">
+            <input
+              type="text"
+              required
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder=" "
+              className="floating-input"
+            />
+            <User className="floating-input-icon text-text-muted" />
+            <label className="floating-label">Full Name</label>
           </div>
 
-          <div>
-            <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">
-              Email Address
-            </label>
-            <div className="relative">
-              <Mail className="absolute left-3 top-3.5 w-5 h-5 text-text-muted" />
-              <input
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="name@example.com"
-                className="w-full pl-10 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-all text-white placeholder-white/20"
-              />
-            </div>
+          <div className="floating-input-group">
+            <input
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder=" "
+              className="floating-input"
+            />
+            <Mail className="floating-input-icon text-text-muted" />
+            <label className="floating-label">Email Address</label>
           </div>
 
-          <div>
-            <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">
-              Password
-            </label>
-            <div className="relative">
-              <Lock className="absolute left-3 top-3.5 w-5 h-5 text-text-muted" />
-              <input
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="•••••••• (min. 8 characters)"
-                className="w-full pl-10 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-all text-white placeholder-white/20"
-              />
-            </div>
+          <div className="floating-input-group">
+            <input
+              type="password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder=" "
+              className="floating-input"
+            />
+            <Lock className="floating-input-icon text-text-muted" />
+            <label className="floating-label">Password</label>
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-primary to-secondary hover:from-primary-hover hover:to-secondary text-white font-semibold rounded-xl transition-all shadow-lg shadow-primary/10 hover:shadow-primary/20 active:scale-[0.98] disabled:opacity-50"
+            className="w-full flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-primary to-secondary hover:from-primary-hover hover:to-secondary text-white font-semibold rounded-xl transition-all shadow-lg shadow-primary/10 hover:shadow-primary/20 active:scale-[0.98] disabled:opacity-50 cursor-pointer"
           >
             {loading ? "Creating Account..." : "Create Account"}
             {!loading && <ArrowRight className="w-5 h-5" />}

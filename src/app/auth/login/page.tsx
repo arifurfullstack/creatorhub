@@ -68,52 +68,44 @@ export default function LoginPage() {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-5">
-          <div>
-            <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">
-              Email Address
-            </label>
-            <div className="relative">
-              <Mail className="absolute left-3 top-3.5 w-5 h-5 text-text-muted" />
-              <input
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="name@example.com"
-                className="w-full pl-10 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-all text-white placeholder-white/20"
-              />
-            </div>
+          <div className="floating-input-group">
+            <input
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder=" "
+              className="floating-input"
+            />
+            <Mail className="floating-input-icon text-text-muted" />
+            <label className="floating-label">Email Address</label>
           </div>
 
-          <div>
-            <div className="flex justify-between items-center mb-2">
-              <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider">
-                Password
-              </label>
-              <Link
-                href="/auth/forgot-password"
-                className="text-xs text-primary hover:underline font-medium"
-              >
-                Forgot?
-              </Link>
-            </div>
-            <div className="relative">
-              <Lock className="absolute left-3 top-3.5 w-5 h-5 text-text-muted" />
+          <div className="relative">
+            <div className="floating-input-group">
               <input
                 type="password"
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="w-full pl-10 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-all text-white placeholder-white/20"
+                placeholder=" "
+                className="floating-input pr-16"
               />
+              <Lock className="floating-input-icon text-text-muted" />
+              <label className="floating-label">Password</label>
             </div>
+            <Link
+              href="/auth/forgot-password"
+              className="absolute right-3.5 top-[17px] text-xs text-primary hover:underline font-semibold z-10"
+            >
+              Forgot?
+            </Link>
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-primary to-secondary hover:from-primary-hover hover:to-secondary text-white font-semibold rounded-xl transition-all shadow-lg shadow-primary/10 hover:shadow-primary/20 active:scale-[0.98] disabled:opacity-50"
+            className="w-full flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-primary to-secondary hover:from-primary-hover hover:to-secondary text-white font-semibold rounded-xl transition-all shadow-lg shadow-primary/10 hover:shadow-primary/20 active:scale-[0.98] disabled:opacity-50 cursor-pointer"
           >
             {loading ? "Logging In..." : "Log In"}
             {!loading && <ArrowRight className="w-5 h-5" />}

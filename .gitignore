@@ -44,3 +44,9 @@ next-env.d.ts
 
 # local credentials
 loginCredentials.MD
+
+# agent files
+.agent/
+
+# local uploads
+public/uploads/

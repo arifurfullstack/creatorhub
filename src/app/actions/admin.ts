@@ -93,12 +93,13 @@ export async function getAdminOverview() {
 export async function updatePlatformSetting(key: string, value: string) {
   await checkAdminSession();
 
-  const setting = await prisma.systemSetting.update({
+  const setting = await prisma.systemSetting.upsert({
     where: { key },
-    data: { value },
+    update: { value },
+    create: { key, value, description: `Dynamic branding metadata setting: ${key}` },
   });
 
-  revalidatePath("/dashboard/admin");
+  revalidatePath("/", "layout");
   return { success: true, setting };
 }
 

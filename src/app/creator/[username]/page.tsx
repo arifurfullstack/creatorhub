@@ -43,11 +43,13 @@ export default async function CreatorProfilePage({ params }: PageProps) {
   // Serialize Prisma Date objects to strings for Client Component usage
   const serializedCreator = {
     id: creator.id,
+    userId: creator.userId,
     username: creator.username,
     displayName: creator.displayName,
     bio: creator.bio,
     location: creator.location,
     coverImage: creator.coverImage,
+    socialLinks: creator.socialLinks,
     followerCount: creator.followerCount,
     subscriberCount: creator.subscriberCount,
     postCount: creator.postCount,

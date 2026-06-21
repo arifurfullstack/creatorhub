@@ -116,6 +116,68 @@ async function main() {
         { title: "Weekly Meal Prep Matrix (PDF)", content: "High-protein meal plan containing recipes, shopping lists, and dynamic caloric calculators for weight loss and muscle retention.", visibility: "subscribers", price: 0, media: ["https://images.unsplash.com/photo-1490645935967-10de6ba17061?auto=format&fit=crop&q=80&w=800"] },
       ],
     },
+    {
+      email: "sarah@creatorhub.com",
+      name: "Sarah Chen",
+      username: "sarahux",
+      category: "UI/UX & Product Design",
+      bio: "Principal UX Designer & Design Systems Architect. Creating premium glassmorphism layouts, Figma token kits, and interactive micro-interactions. Subscribe to download my design systems & source files.",
+      location: "San Francisco, CA",
+      coverImage: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&q=80&w=1200",
+      avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=150",
+      isVerified: true,
+      socialLinks: {
+        github: "https://github.com",
+        twitter: "https://twitter.com",
+        dribbble: "https://dribbble.com",
+        behance: "https://behance.com",
+        skills: [
+          { name: "Design Systems & Component Architecture", level: 95, category: "Core Design" },
+          { name: "Figma Variables & Tokens", level: 90, category: "Core Design" },
+          { name: "Interactive Prototyping & Motion", level: 85, category: "Core Design" },
+          { name: "Spatial UI Design (visionOS)", level: 80, category: "Specialized" },
+          { name: "Responsive Layouts (Web/Mobile)", level: 95, category: "Core Design" },
+          { name: "UX Research & Wireframing", level: 90, category: "Core Design" },
+          { name: "HTML/CSS, Tailwind & React", level: 80, category: "Development" }
+        ],
+        projects: [
+          {
+            title: "Aethera SaaS Design System",
+            description: "A comprehensive UI kit for enterprise dashboards featuring light/dark variables, fluid typography, and 150+ interactive variants.",
+            role: "Lead Product Designer",
+            skills: ["Figma Variables", "Component Architecture", "Design Tokens"],
+            image: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&q=80&w=800",
+            demoUrl: "https://figma.com",
+            githubUrl: "https://github.com"
+          },
+          {
+            title: "Nova Fintech Mobile App UI/UX",
+            description: "End-to-end design for a digital banking app focused on micro-investing. Included high-fidelity interactive flow animation in Principle.",
+            role: "Lead UX/UI Designer",
+            skills: ["Mobile UX", "Interactive Prototyping", "User Testing"],
+            image: "https://images.unsplash.com/photo-1614741118887-7a4ee193a5fa?auto=format&fit=crop&q=80&w=800",
+            demoUrl: "https://figma.com"
+          },
+          {
+            title: "Spatial Glassmorphism visionOS Concept",
+            description: "An immersive UI prototype exploring glass shaders, volumetric cards, and hover glow feedback loops for spatial computing.",
+            role: "Concept Artist & Spatial Designer",
+            skills: ["visionOS", "3D Rendering", "Apple Design Guidelines"],
+            image: "https://images.unsplash.com/photo-1634017839464-5c339ebe3cb4?auto=format&fit=crop&q=80&w=800",
+            demoUrl: "https://figma.com"
+          }
+        ]
+      },
+      plans: [
+        { name: "Design Apprentice", price: 10, benefits: ["Access to Figma design templates", "UX case studies breakdown", "Access to subscriber chat room"] },
+        { name: "Design System Pro", price: 25, benefits: ["Download full design system file (Figma + Tokens)", "Monthly masterclass video on motion design", "Framer/Next.js UI components template", "Priority DM replies"] },
+        { name: "VIP Studio Mentorship", price: 75, benefits: ["1-on-1 portfolio review & advice", "Custom component design requests", "All premium resources & source files"] },
+      ],
+      posts: [
+        { title: "SaaS Dashboard Wireframe System", content: "Check out the wireframe layout kit for modern SaaS applications. Focus on clean grid alignment, clear typographic hierarchy, and quick navigation layouts before adding high-fidelity skins.", visibility: "public", price: 0, media: ["https://images.unsplash.com/photo-1581291518633-83b4ebd1d83e?auto=format&fit=crop&q=80&w=800"] },
+        { title: "[Download] Glassmorphic Component Library", content: "A high-fidelity Figma asset bundle exploring glassmorphic panels, glowing neon highlights, and custom backdrop blur settings. Premium download for subscribers.", visibility: "subscribers", price: 0, media: ["https://images.unsplash.com/photo-1634017839464-5c339ebe3cb4?auto=format&fit=crop&q=80&w=800"] },
+      ],
+    },
   ];
 
   for (const c of creatorsData) {
@@ -146,6 +208,7 @@ async function main() {
         location: c.location,
         coverImage: c.coverImage,
         isVerified: c.isVerified,
+        socialLinks: (c as any).socialLinks ? JSON.stringify((c as any).socialLinks) : null,
         followerCount: Math.floor(Math.random() * 500) + 100,
         subscriberCount: Math.floor(Math.random() * 50) + 10,
         postCount: c.posts.length,
@@ -206,6 +269,10 @@ async function main() {
   console.log("-----------------------------------------");
   console.log("3. CREATOR Account (Aria Vance):");
   console.log("   - Email:    aria@creatorhub.com");
+  console.log("   - Password: creatorpassword123");
+  console.log("-----------------------------------------");
+  console.log("4. CREATOR Account (Sarah Chen - UI/UX Design):");
+  console.log("   - Email:    sarah@creatorhub.com");
   console.log("   - Password: creatorpassword123");
   console.log("=========================================");
 }

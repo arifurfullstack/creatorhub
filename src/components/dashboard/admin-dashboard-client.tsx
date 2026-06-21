@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
 import {
   updatePlatformSetting,
   changeUserRole,
@@ -8,6 +9,8 @@ import {
   handleVerificationRequest,
   handleWithdrawalRequest,
 } from "@/app/actions/admin";
+import { Command } from "cmdk";
+import { toast } from "sonner";
 import {
   Shield,
   Users,
@@ -24,7 +27,9 @@ import {
   Search,
   UserMinus,
   Save,
-  FileText
+  FileText,
+  Globe,
+  Palette
 } from "lucide-react";
 
 interface UserData {
@@ -81,7 +86,7 @@ interface AdminOverviewProps {
 }
 
 export default function AdminDashboardClient({ data }: { data: AdminOverviewProps }) {
-  const [activeTab, setActiveTab] = useState<"overview" | "users" | "verifications" | "withdrawals" | "settings">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "users" | "verifications" | "withdrawals" | "settings" | "customizer" | "theme">("overview");
 
   // Local state for lists
   const [usersList, setUsersList] = useState<UserData[]>(data.users);
@@ -89,6 +94,19 @@ export default function AdminDashboardClient({ data }: { data: AdminOverviewProp
   const [withdrawals, setWithdrawals] = useState<PayoutRequest[]>(data.pendingWithdrawals);
   const [settings, setSettings] = useState<SystemSetting[]>(data.settings);
   const [searchQuery, setSearchQuery] = useState("");
+  const [openCommand, setOpenCommand] = useState(false);
+
+  // Toggle command palette on Ctrl+K
+  useEffect(() => {
+    const down = (e: KeyboardEvent) => {
+      if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        setOpenCommand((open) => !open);
+      }
+    };
+    document.addEventListener("keydown", down);
+    return () => document.removeEventListener("keydown", down);
+  }, []);
 
   // Loading indicator states
   const [loadingId, setLoadingId] = useState<string | null>(null);
@@ -99,15 +117,75 @@ export default function AdminDashboardClient({ data }: { data: AdminOverviewProp
   const [commissionVal, setCommissionVal] = useState(commissionSetting?.value || "10");
   const [minWithdrawVal, setMinWithdrawVal] = useState(minWithdrawSetting?.value || "50");
 
+  // Website Customizer States
+  const logoSetting = settings.find((s) => s.key === "website_logo");
+  const faviconSetting = settings.find((s) => s.key === "website_favicon");
+  const titleSetting = settings.find((s) => s.key === "website_title");
+  const descriptionSetting = settings.find((s) => s.key === "website_description");
+  const metaTitleSetting = settings.find((s) => s.key === "website_meta_title");
+  const metaDescriptionSetting = settings.find((s) => s.key === "website_meta_description");
+  const keywordsSetting = settings.find((s) => s.key === "website_keywords");
+  const themeSetting = settings.find((s) => s.key === "website_theme");
+
+  const [logoVal, setLogoVal] = useState(logoSetting?.value || "CREATORHUB");
+  const [faviconVal, setFaviconVal] = useState(faviconSetting?.value || "/favicon.ico");
+  const [titleVal, setTitleVal] = useState(titleSetting?.value || "CreatorHub | Premium Creator Economy Platform");
+  const [descriptionVal, setDescriptionVal] = useState(descriptionSetting?.value || "Monetize your content through subscriptions, locked posts, tips, and direct messaging. The ultimate SaaS platform for creators and fans.");
+  const [metaTitleVal, setMetaTitleVal] = useState(metaTitleSetting?.value || "CreatorHub | Premium Creator Economy Platform");
+  const [metaDescriptionVal, setMetaDescriptionVal] = useState(metaDescriptionSetting?.value || "Monetize your content through subscriptions, locked posts, tips, and direct messaging. The ultimate SaaS platform for creators and fans.");
+  const [keywordsVal, setKeywordsVal] = useState(keywordsSetting?.value || "creator, platform, subscriptions, economy");
+  const [themeVal, setThemeVal] = useState(themeSetting?.value || "dark");
+
+  const [isSavingCustomizer, setIsSavingCustomizer] = useState(false);
+
+  const handleSaveCustomizer = async () => {
+    setIsSavingCustomizer(true);
+    try {
+      await updatePlatformSetting("website_logo", logoVal);
+      await updatePlatformSetting("website_favicon", faviconVal);
+      await updatePlatformSetting("website_title", titleVal);
+      await updatePlatformSetting("website_description", descriptionVal);
+      await updatePlatformSetting("website_meta_title", metaTitleVal);
+      await updatePlatformSetting("website_meta_description", metaDescriptionVal);
+      await updatePlatformSetting("website_keywords", keywordsVal);
+      await updatePlatformSetting("website_theme", themeVal);
+      
+      toast.success("Website customizer settings saved successfully!");
+      // Reload layout resources dynamically at layout root
+      setTimeout(() => window.location.reload(), 800);
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to save customizer settings");
+    } finally {
+      setIsSavingCustomizer(false);
+    }
+  };
+
+  const [isApplyingTheme, setIsApplyingTheme] = useState(false);
+  const handleApplyTheme = async (themeId: string) => {
+    setIsApplyingTheme(true);
+    const loadingToast = toast.loading(`Applying theme preset...`);
+    try {
+      await updatePlatformSetting("website_theme", themeId);
+      setThemeVal(themeId);
+      toast.success("Theme preset applied successfully!", { id: loadingToast });
+      // Reload layout resources dynamically at layout root
+      setTimeout(() => window.location.reload(), 800);
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to apply theme", { id: loadingToast });
+    } finally {
+      setIsApplyingTheme(false);
+    }
+  };
+
   const handleUpdateSetting = async (key: string, value: string) => {
     try {
       const res = await updatePlatformSetting(key, value);
       if (res.success && res.setting) {
         setSettings(settings.map((s) => (s.key === key ? { ...s, value: res.setting.value } : s)));
-        alert(`Platform setting ${key} updated successfully!`);
+        toast.success(`Platform setting ${key} updated successfully!`);
       }
     } catch (err: any) {
-      alert(err?.message || "Failed to update setting");
+      toast.error(err?.message || "Failed to update setting");
     }
   };
 
@@ -117,10 +195,10 @@ export default function AdminDashboardClient({ data }: { data: AdminOverviewProp
       const res = await changeUserRole(userId, newRole);
       if (res.success && res.user) {
         setUsersList(usersList.map((u) => (u.id === userId ? { ...u, role: res.user.role } : u)));
-        alert("User role updated successfully!");
+        toast.success("User role updated successfully!");
       }
     } catch (err: any) {
-      alert(err?.message || "Failed to change user role");
+      toast.error(err?.message || "Failed to change user role");
     }
   };
 
@@ -131,10 +209,10 @@ export default function AdminDashboardClient({ data }: { data: AdminOverviewProp
       const res = await toggleUserStatus(userId, ban);
       if (res.success && res.user) {
         setUsersList(usersList.map((u) => (u.id === userId ? { ...u, role: res.user.role } : u)));
-        alert(`User has been ${ban ? "banned" : "unbanned"} successfully.`);
+        toast.success(`User has been ${ban ? "banned" : "unbanned"} successfully.`);
       }
     } catch (err: any) {
-      alert(err?.message || "Failed to modify user status");
+      toast.error(err?.message || "Failed to modify user status");
     }
   };
 
@@ -144,10 +222,10 @@ export default function AdminDashboardClient({ data }: { data: AdminOverviewProp
       const res = await handleVerificationRequest(creatorProfileId, approve);
       if (res.success) {
         setVerifications(verifications.filter((v) => v.id !== creatorProfileId));
-        alert(`Verification request ${approve ? "approved" : "rejected"}!`);
+        toast.success(`Verification request ${approve ? "approved" : "rejected"}!`);
       }
     } catch (err: any) {
-      alert(err?.message || "Failed to moderate verification");
+      toast.error(err?.message || "Failed to moderate verification");
     } finally {
       setLoadingId(null);
     }
@@ -159,10 +237,10 @@ export default function AdminDashboardClient({ data }: { data: AdminOverviewProp
       const res = await handleWithdrawalRequest(withdrawalId, status);
       if (res.success) {
         setWithdrawals(withdrawals.filter((w) => w.id !== withdrawalId));
-        alert(`Withdrawal request has been marked as ${status}.`);
+        toast.success(`Withdrawal request has been marked as ${status}.`);
       }
     } catch (err: any) {
-      alert(err?.message || "Failed to process withdrawal");
+      toast.error(err?.message || "Failed to process withdrawal");
     } finally {
       setLoadingId(null);
     }
@@ -176,9 +254,16 @@ export default function AdminDashboardClient({ data }: { data: AdminOverviewProp
   );
 
   return (
-    <div className="min-h-screen bg-[#09090b] flex flex-col md:flex-row">
+    <div className="min-h-screen bg-transparent flex flex-col md:flex-row relative overflow-hidden pt-24 md:pt-28">
+      {/* Background Liquid Mesh Evolved */}
+      <div className="liquid-mesh-container">
+        <div className="liquid-mesh-blob liquid-mesh-blob-1" />
+        <div className="liquid-mesh-blob liquid-mesh-blob-2" />
+        <div className="liquid-mesh-blob liquid-mesh-blob-3" />
+      </div>
+
       {/* Sidebar Controls */}
-      <aside className="w-full md:w-64 bg-card border-r border-white/5 p-6 shrink-0">
+      <aside className="w-full md:w-64 glass-card-static p-6 shrink-0 relative z-10">
         <div className="mb-8">
           <p className="text-[10px] text-primary font-bold uppercase tracking-widest">Administrator</p>
           <h2 className="text-lg font-extrabold text-white mt-1 flex items-center gap-1.5">
@@ -194,6 +279,8 @@ export default function AdminDashboardClient({ data }: { data: AdminOverviewProp
             { id: "verifications", label: "Verifications Queue", icon: Star },
             { id: "withdrawals", label: "Withdrawals Audit", icon: CreditCard },
             { id: "settings", label: "Platform Settings", icon: Settings },
+            { id: "customizer", label: "Website Customizer", icon: Globe },
+            { id: "theme", label: "Website Themes", icon: Palette },
           ].map((item) => {
             const Icon = item.icon;
             const isSelected = activeTab === item.id;
@@ -201,14 +288,24 @@ export default function AdminDashboardClient({ data }: { data: AdminOverviewProp
               <button
                 key={item.id}
                 onClick={() => setActiveTab(item.id as any)}
-                className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+                className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all relative ${
                   isSelected
-                    ? "bg-primary text-white shadow-lg shadow-primary/10"
+                    ? "text-white"
                     : "text-text-muted hover:text-white hover:bg-white/5"
                 }`}
               >
-                <Icon className="w-4.5 h-4.5" />
-                {item.label}
+                {isSelected && (
+                  <>
+                    <motion.div
+                      layoutId="activeAdminDashTab"
+                      className="absolute inset-0 bg-white/10 border border-white/10 rounded-xl -z-10 shadow-lg"
+                      transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                    />
+                    <span className="absolute left-0 top-3 bottom-3 w-1 bg-primary rounded-r-md" />
+                  </>
+                )}
+                <Icon className="w-4.5 h-4.5 relative z-10" />
+                <span className="relative z-10">{item.label}</span>
               </button>
             );
           })}
@@ -220,9 +317,18 @@ export default function AdminDashboardClient({ data }: { data: AdminOverviewProp
         {/* Overview Panel */}
         {activeTab === "overview" && (
           <div className="space-y-8">
-            <div className="border-b border-white/5 pb-5">
-              <h1 className="text-3xl font-extrabold text-white">Dashboard Overview</h1>
-              <p className="text-xs text-text-muted mt-1">Platform analytics and administrative status</p>
+            <div className="flex justify-between items-center border-b border-white/5 pb-5">
+              <div>
+                <h1 className="text-3xl font-extrabold text-white">Dashboard Overview</h1>
+                <p className="text-xs text-text-muted mt-1">Platform analytics and administrative status</p>
+              </div>
+              <div className="hidden sm:flex items-center gap-2 text-xs text-text-muted px-3 py-1.5 rounded-lg bg-white/5 border border-white/5">
+                <span>Press</span>
+                <kbd className="px-1.5 py-0.5 rounded bg-white/10 border border-white/10 text-white font-mono text-[10px]">Ctrl</kbd>
+                <span>+</span>
+                <kbd className="px-1.5 py-0.5 rounded bg-white/10 border border-white/10 text-white font-mono text-[10px]">K</kbd>
+                <span>to search commands</span>
+              </div>
             </div>
 
             {/* Platform statistics widgets */}
@@ -233,7 +339,7 @@ export default function AdminDashboardClient({ data }: { data: AdminOverviewProp
                 { label: "Registered Users", value: data.totalUsers, sub: "Fans, creators, admins", color: "text-white" },
                 { label: "Creator Profiles", value: data.totalCreators, sub: "Verified + unverified", color: "text-white" },
               ].map((card, i) => (
-                <div key={i} className="bg-card border border-white/5 p-5 rounded-2xl relative overflow-hidden">
+                <div key={i} className="glass-card-premium p-5 rounded-2xl relative overflow-hidden">
                   <p className="text-[10px] text-text-muted font-bold uppercase tracking-wider">{card.label}</p>
                   <p className={`text-2xl font-black mt-2 ${card.color}`}>{card.value}</p>
                   <p className="text-[10px] text-text-muted mt-1">{card.sub}</p>
@@ -244,7 +350,7 @@ export default function AdminDashboardClient({ data }: { data: AdminOverviewProp
             {/* Quick Actions / Highlights */}
             <div className="grid md:grid-cols-2 gap-6">
               {/* Verifications indicator */}
-              <div className="bg-card border border-white/5 p-6 rounded-2xl">
+              <div className="glass-card-premium p-6 rounded-2xl">
                 <h3 className="font-bold text-white text-base mb-4 flex items-center gap-2">
                   <Star className="w-5 h-5 text-primary" />
                   Verification Queue
@@ -261,7 +367,7 @@ export default function AdminDashboardClient({ data }: { data: AdminOverviewProp
               </div>
 
               {/* Withdrawals indicator */}
-              <div className="bg-card border border-white/5 p-6 rounded-2xl">
+              <div className="glass-card-premium p-6 rounded-2xl">
                 <h3 className="font-bold text-white text-base mb-4 flex items-center gap-2">
                   <CreditCard className="w-5 h-5 text-primary" />
                   Withdrawals Queue
@@ -301,7 +407,7 @@ export default function AdminDashboardClient({ data }: { data: AdminOverviewProp
             </div>
 
             {/* Users Table */}
-            <div className="bg-card border border-white/5 rounded-2xl overflow-hidden shadow-2xl">
+            <div className="glass-card-static rounded-2xl overflow-hidden shadow-2xl">
               <div className="overflow-x-auto">
                 <table className="w-full border-collapse text-left text-xs">
                   <thead className="bg-white/5 text-text-muted uppercase font-bold tracking-wider border-b border-white/5">
@@ -639,7 +745,554 @@ export default function AdminDashboardClient({ data }: { data: AdminOverviewProp
             </div>
           </div>
         )}
+
+        {/* Website Customizer Tab */}
+        {activeTab === "customizer" && (
+          <div className="space-y-8 animate-fadeIn">
+            <div className="border-b border-white/5 pb-5">
+              <h1 className="text-3xl font-extrabold text-white">Website Customizer</h1>
+              <p className="text-xs text-text-muted mt-1">Manage global platform themes, branding text, dynamic SEO properties, and favicons</p>
+            </div>
+
+            <div className="grid lg:grid-cols-12 gap-8 items-start">
+              {/* Settings Fields */}
+              <div className="lg:col-span-7 space-y-6">
+                <div className="bg-card border border-white/5 p-6 rounded-2xl space-y-6">
+                  <div>
+                    <h3 className="font-bold text-white text-base mb-2 flex items-center gap-2">
+                      <Globe className="w-5 h-5 text-primary" />
+                      Branding & Theme
+                    </h3>
+                    <p className="text-xs text-text-muted">General website identity configurations.</p>
+                  </div>
+
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-[10px] font-bold text-text-muted uppercase tracking-wider mb-2">
+                        Logo Branding (Text or Image URL)
+                      </label>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={logoVal}
+                          onChange={(e) => setLogoVal(e.target.value)}
+                          placeholder="e.g. CREATORHUB or /uploads/logo.png"
+                          className="flex-1 min-w-0 px-3 py-2 bg-white/5 border border-white/10 rounded-xl focus:border-primary focus:outline-none text-sm text-white font-bold"
+                        />
+                        <label className="relative flex items-center justify-center px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl cursor-pointer text-xs font-bold text-white transition-all shrink-0 hover:scale-[1.02]">
+                          <span>Upload Image</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={async (e) => {
+                              const file = e.target.files?.[0];
+                              if (!file) return;
+                              const loadingToast = toast.loading("Uploading logo...");
+                              try {
+                                const body = new FormData();
+                                body.append("file", file);
+                                const res = await fetch("/api/upload", {
+                                  method: "POST",
+                                  body,
+                                });
+                                const data = await res.json();
+                                if (!res.ok || data.error) {
+                                  throw new Error(data.error || "Failed to upload logo");
+                                }
+                                setLogoVal(data.url);
+                                toast.success("Logo uploaded successfully!", { id: loadingToast });
+                              } catch (err: any) {
+                                toast.error(err.message || "Logo upload failed", { id: loadingToast });
+                              }
+                            }}
+                          />
+                        </label>
+                      </div>
+                      {(logoVal.startsWith("/") || logoVal.startsWith("http")) && (
+                        <div className="mt-2 flex items-center gap-2 text-[10px] text-text-muted">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={logoVal} alt="Logo preview" className="h-6 max-w-[100px] object-contain rounded bg-white/5 p-0.5" />
+                          <button type="button" onClick={() => setLogoVal("CREATORHUB")} className="text-red-400 hover:text-red-300 font-semibold cursor-pointer">Remove image</button>
+                        </div>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-bold text-text-muted uppercase tracking-wider mb-2">
+                        Favicon Path or URL
+                      </label>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={faviconVal}
+                          onChange={(e) => setFaviconVal(e.target.value)}
+                          placeholder="e.g. /favicon.ico"
+                          className="flex-1 min-w-0 px-3 py-2 bg-white/5 border border-white/10 rounded-xl focus:border-primary focus:outline-none text-sm text-white font-mono"
+                        />
+                        <label className="relative flex items-center justify-center px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl cursor-pointer text-xs font-bold text-white transition-all shrink-0 hover:scale-[1.02]">
+                          <span>Upload Icon</span>
+                          <input
+                            type="file"
+                            accept="image/*,.ico"
+                            className="hidden"
+                            onChange={async (e) => {
+                              const file = e.target.files?.[0];
+                              if (!file) return;
+                              const loadingToast = toast.loading("Uploading favicon...");
+                              try {
+                                const body = new FormData();
+                                body.append("file", file);
+                                const res = await fetch("/api/upload", {
+                                  method: "POST",
+                                  body,
+                                });
+                                const data = await res.json();
+                                if (!res.ok || data.error) {
+                                  throw new Error(data.error || "Failed to upload favicon");
+                                }
+                                setFaviconVal(data.url);
+                                toast.success("Favicon uploaded successfully!", { id: loadingToast });
+                              } catch (err: any) {
+                                toast.error(err.message || "Favicon upload failed", { id: loadingToast });
+                              }
+                            }}
+                          />
+                        </label>
+                      </div>
+                      {(faviconVal.startsWith("/") || faviconVal.startsWith("http")) && (
+                        <div className="mt-2 flex items-center gap-2 text-[10px] text-text-muted">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={faviconVal} alt="Favicon preview" className="w-5 h-5 object-contain rounded bg-white/5 p-0.5" />
+                          <button type="button" onClick={() => setFaviconVal("/favicon.ico")} className="text-red-400 hover:text-red-300 font-semibold cursor-pointer">Reset default</button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-text-muted uppercase tracking-wider mb-2">
+                      Active Website Theme Style
+                    </label>
+                    <div className="bg-white/5 p-4 rounded-xl border border-white/10 flex items-center justify-between">
+                      <div>
+                        <span className="text-xs font-bold text-white block capitalize">
+                          {themeVal.replace("theme-", "").replace("dark", "Vibrant Sunset Dark").replace("light", "Light Minimalist")}
+                        </span>
+                        <span className="text-[10px] text-text-muted">Configure color palette and theme presets.</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab("theme")}
+                        className="px-3.5 py-1.5 bg-primary/10 hover:bg-primary/25 border border-primary/20 hover:border-primary/40 text-primary hover:text-white rounded-lg text-xs font-bold transition-all cursor-pointer"
+                      >
+                        Switch Theme Presets
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-card border border-white/5 p-6 rounded-2xl space-y-4">
+                  <h3 className="font-bold text-white text-base mb-2 flex items-center gap-2">
+                    <Settings className="w-5 h-5 text-primary" />
+                    SEO Meta Configurations
+                  </h3>
+
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-[10px] font-bold text-text-muted uppercase tracking-wider mb-2">
+                        Website Title
+                      </label>
+                      <input
+                        type="text"
+                        value={titleVal}
+                        onChange={(e) => setTitleVal(e.target.value)}
+                        placeholder="Platform Website Title"
+                        className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-xl focus:border-primary focus:outline-none text-sm text-white"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-bold text-text-muted uppercase tracking-wider mb-2">
+                        Website Description
+                      </label>
+                      <textarea
+                        value={descriptionVal}
+                        onChange={(e) => setDescriptionVal(e.target.value)}
+                        rows={3}
+                        placeholder="Dynamic metadata site description details..."
+                        className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-xl focus:border-primary focus:outline-none text-sm text-white"
+                      />
+                    </div>
+
+                    <div className="grid sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-[10px] font-bold text-text-muted uppercase tracking-wider mb-2">
+                          Meta SEO Title Override
+                        </label>
+                        <input
+                          type="text"
+                          value={metaTitleVal}
+                          onChange={(e) => setMetaTitleVal(e.target.value)}
+                          placeholder="Meta Title Tag"
+                          className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-xl focus:border-primary focus:outline-none text-sm text-white"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-bold text-text-muted uppercase tracking-wider mb-2">
+                          Meta Keywords List
+                        </label>
+                        <input
+                          type="text"
+                          value={keywordsVal}
+                          onChange={(e) => setKeywordsVal(e.target.value)}
+                          placeholder="Comma-separated keywords"
+                          className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-xl focus:border-primary focus:outline-none text-sm text-white font-mono text-xs"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-bold text-text-muted uppercase tracking-wider mb-2">
+                        Meta SEO Description Override
+                      </label>
+                      <textarea
+                        value={metaDescriptionVal}
+                        onChange={(e) => setMetaDescriptionVal(e.target.value)}
+                        rows={3}
+                        placeholder="SEO meta description snippet tag..."
+                        className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-xl focus:border-primary focus:outline-none text-sm text-white"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex justify-end">
+                  <button
+                    onClick={handleSaveCustomizer}
+                    disabled={isSavingCustomizer}
+                    className="px-6 py-3 bg-gradient-to-r from-primary to-secondary hover:brightness-110 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition-all shadow-lg shadow-primary/10 flex items-center gap-2 cursor-pointer hover:scale-[1.01]"
+                  >
+                    <Save className="w-4 h-4" />
+                    {isSavingCustomizer ? "Saving Customizer..." : "Save Customizer Branding"}
+                  </button>
+                </div>
+              </div>
+
+              {/* SEO Live Preview Panel */}
+              <div className="lg:col-span-5 space-y-6">
+                <div className="bg-card border border-white/5 p-6 rounded-2xl space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-extrabold text-white uppercase tracking-wider">SEO Google Search Card Preview</h4>
+                    <span className="text-[9px] px-2 py-0.5 rounded-full bg-green-500/10 border border-green-500/20 text-green-400 font-bold uppercase tracking-wider">Live</span>
+                  </div>
+
+                  <p className="text-[11px] text-text-muted">
+                    This is how your platform is displayed in organic Google Search engine listings.
+                  </p>
+
+                  <div className="bg-[#17171a] p-4 rounded-xl border border-white/5 space-y-1.5">
+                    {/* Google URL structure */}
+                    <div className="flex items-center gap-1.5 text-xs text-white/60">
+                      <div className="w-4 h-4 rounded-full bg-white/10 flex items-center justify-center overflow-hidden shrink-0">
+                        {faviconVal ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={faviconVal} alt="Favicon" className="w-2.5 h-2.5 error-fallback" onError={(e)=>{(e.target as HTMLElement).style.display='none'}} />
+                        ) : (
+                          <div className="w-2 h-2 rounded bg-primary" />
+                        )}
+                      </div>
+                      <div className="truncate font-sans text-[11px] text-white/50">
+                        https://creatorhub.com <span className="text-white/30">&rsaquo; search</span>
+                      </div>
+                    </div>
+
+                    {/* Google Blue Link Title */}
+                    <h3 className="text-[#8ab4f8] text-base font-medium leading-tight hover:underline cursor-pointer truncate">
+                      {metaTitleVal || titleVal || "CreatorHub | Premium Creator Economy Platform"}
+                    </h3>
+
+                    {/* Google Snippet description */}
+                    <p className="text-[#bdc1c6] text-[11.5px] leading-snug line-clamp-2">
+                      {metaDescriptionVal || descriptionVal || "Monetize your content through subscriptions, locked posts, tips, and direct messaging."}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="bg-card border border-white/5 p-6 rounded-2xl space-y-4">
+                  <h4 className="text-xs font-extrabold text-white uppercase tracking-wider">Platform Branding Mockup</h4>
+                  
+                  <div className={`p-4 rounded-xl border transition-all ${themeVal === 'light' ? 'bg-white border-black/15 text-black' : 'bg-[#09090b] border-white/10 text-white'}`}>
+                    <div className="flex items-center justify-between border-b border-current/10 pb-3 mb-3">
+                      <span className="text-sm font-black tracking-wider uppercase text-gradient">{logoVal}</span>
+                      <div className="flex gap-2">
+                        <span className="w-2.5 h-2.5 rounded-full bg-current/25" />
+                        <span className="w-2.5 h-2.5 rounded-full bg-current/25" />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="h-2 w-2/3 rounded bg-current/20" />
+                      <div className="h-2 w-full rounded bg-current/10" />
+                      <div className="h-2 w-4/5 rounded bg-current/10" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Website Themes Tab */}
+        {activeTab === "theme" && (
+          <div className="space-y-8 animate-fadeIn">
+            <div className="border-b border-white/5 pb-5">
+              <h1 className="text-3xl font-extrabold text-white">Website Themes</h1>
+              <p className="text-xs text-text-muted mt-1">Switch the entire website color style, accents, and default brand designs in one click</p>
+            </div>
+
+            <div className="grid lg:grid-cols-12 gap-8 items-start">
+              {/* Theme Grid */}
+              <div className="lg:col-span-8 space-y-4">
+                {[
+                  {
+                    id: "dark",
+                    name: "Sunset Crimson (Default)",
+                    desc: "The default luxury dark-theme featuring geometric 'Plus Jakarta Sans' typography, glowing pink-to-purple overlays, and vibrant gradient buttons.",
+                    bg: "bg-[#09090b]",
+                    primaryColor: "#FF4FA3",
+                    secondaryColor: "#FF79C6",
+                    textColor: "text-white",
+                  },
+                  {
+                    id: "theme-glass-gradient",
+                    name: "Premium Glass Gradient (Luxury)",
+                    desc: "An ultra-premium glassmorphic layout style utilizing deep space radial gradients, frosted translucent panels, and vibrant rose/cyan accents.",
+                    bg: "bg-gradient-to-br from-[#150d30] to-[#03020b]",
+                    primaryColor: "#f43f5e",
+                    secondaryColor: "#06b6d4",
+                    textColor: "text-white",
+                  },
+                  {
+                    id: "theme-cyberpunk",
+                    name: "Cyberpunk Neon",
+                    desc: "High-voltage cyberpunk theme featuring raw contrasting neon colors and dark electronic backgrounds.",
+                    bg: "bg-[#0a0a03]",
+                    primaryColor: "#f2e205",
+                    secondaryColor: "#00f0ff",
+                    textColor: "text-white",
+                  },
+                  {
+                    id: "theme-emerald",
+                    name: "Emerald Forest",
+                    desc: "A calming organic theme with natural dark forest greens, clean emerald accents, and soft mint surfaces.",
+                    bg: "bg-[#030806]",
+                    primaryColor: "#10b981",
+                    secondaryColor: "#34d399",
+                    textColor: "text-white",
+                  },
+                  {
+                    id: "theme-obsidian",
+                    name: "Midnight Obsidian",
+                    desc: "Absolute obsidian dark space theme with rich violet tones and clean futuristic typography.",
+                    bg: "bg-[#030303]",
+                    primaryColor: "#8b5cf6",
+                    secondaryColor: "#ec4899",
+                    textColor: "text-white",
+                  },
+                  {
+                    id: "theme-rose",
+                    name: "Rose Quartz",
+                    desc: "Sleek dark-quartz theme with soft warm rose gradients, perfect for visual creators.",
+                    bg: "bg-[#0b0709]",
+                    primaryColor: "#f472b6",
+                    secondaryColor: "#fda4af",
+                    textColor: "text-white",
+                  },
+                  {
+                    id: "theme-sapphire",
+                    name: "Royal Sapphire",
+                    desc: "A professional technology layout styling with dark space blues and electric sapphire accents.",
+                    bg: "bg-[#020617]",
+                    primaryColor: "#3b82f6",
+                    secondaryColor: "#60a5fa",
+                    textColor: "text-white",
+                  },
+                  {
+                    id: "light",
+                    name: "Light Minimalist",
+                    desc: "The platform's minimalist clean light theme with standard zinc card configurations.",
+                    bg: "bg-white",
+                    primaryColor: "#FF4FA3",
+                    secondaryColor: "#FF79C6",
+                    textColor: "text-black",
+                  },
+                ].map((item) => {
+                  const isActive = themeVal === item.id;
+                  return (
+                    <div
+                      key={item.id}
+                      className={`p-5 rounded-2xl border transition-all flex flex-col md:flex-row items-start md:items-center justify-between gap-6 ${
+                        isActive
+                          ? "bg-white/[0.03] border-primary shadow-[0_0_15px_rgba(255,79,163,0.1)]"
+                          : "bg-card border-white/5 hover:border-white/10"
+                      }`}
+                    >
+                      <div className="flex items-start gap-4">
+                        {/* Color Swatches */}
+                        <div className={`w-14 h-14 rounded-xl shrink-0 p-1.5 border border-white/10 ${item.bg} flex flex-wrap gap-1.5 items-center justify-center overflow-hidden shadow-inner`}>
+                          <span className="w-4 h-4 rounded-full block border border-white/5" style={{ backgroundColor: item.primaryColor }} />
+                          <span className="w-4 h-4 rounded-full block border border-white/5" style={{ backgroundColor: item.secondaryColor }} />
+                          <span className={`text-[8px] font-black uppercase ${item.textColor}`}>Aa</span>
+                        </div>
+                        
+                        <div>
+                          <h4 className="font-extrabold text-white text-sm flex items-center gap-2">
+                            {item.name}
+                            {isActive && (
+                              <span className="text-[9px] px-2 py-0.5 rounded-full bg-primary/10 border border-primary/20 text-primary font-bold uppercase tracking-wider">Active</span>
+                            )}
+                          </h4>
+                          <p className="text-xs text-text-muted mt-1 max-w-lg leading-relaxed">{item.desc}</p>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        disabled={isApplyingTheme}
+                        onClick={() => handleApplyTheme(item.id)}
+                        className={`w-full md:w-auto px-4 py-2 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
+                          isActive
+                            ? "bg-primary text-white pointer-events-none"
+                            : "bg-white/5 hover:bg-white/10 text-white border border-white/5 hover:scale-[1.02]"
+                        }`}
+                      >
+                        {isActive ? "Active Theme" : "Apply Preset"}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Sidebar Preview */}
+              <div className="lg:col-span-4 space-y-6">
+                <div className="bg-card border border-white/5 p-6 rounded-2xl space-y-4">
+                  <h4 className="text-xs font-extrabold text-white uppercase tracking-wider">Branding Preview</h4>
+                  <p className="text-[10px] text-text-muted leading-relaxed">
+                    This mockup demonstrates how the selected theme's header text, accent rings, and visual highlights look when applied.
+                  </p>
+                  
+                  {/* Miniature Mockup */}
+                  <div className="p-4 rounded-xl border border-white/5 bg-[#17171a] space-y-4">
+                    {/* Header mock */}
+                    <div className="flex items-center justify-between border-b border-white/5 pb-2.5">
+                      <span className="text-xs font-black tracking-wider uppercase" style={{ color: themeVal === 'light' ? '#FF4FA3' : 'var(--primary)' }}>
+                        {logoVal}
+                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-4 h-4 rounded-full" style={{ backgroundColor: 'var(--primary)' }} />
+                        <span className="w-1.5 h-1.5 rounded-full bg-white/30" />
+                        <span className="w-1.5 h-1.5 rounded-full bg-white/30" />
+                      </div>
+                    </div>
+                    {/* Hero mock */}
+                    <div className="space-y-2 text-center py-2">
+                      <div className="h-1.5 w-1/2 rounded bg-white/20 mx-auto" />
+                      <div className="h-3 w-4/5 rounded mx-auto" style={{ background: 'linear-gradient(to right, var(--primary), var(--secondary))' }} />
+                      <div className="h-1 w-2/3 rounded bg-white/10 mx-auto" />
+                    </div>
+                    {/* Action buttons mock */}
+                    <div className="flex gap-2">
+                      <div className="h-5 flex-1 rounded" style={{ backgroundColor: 'var(--primary)' }} />
+                      <div className="h-5 flex-1 rounded bg-white/5 border border-white/10" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
+
+      {/* Cmdk Command Menu Dialog Modal */}
+      {openCommand && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div onClick={() => setOpenCommand(false)} className="absolute inset-0 bg-black/60 backdrop-blur-md" />
+          <div className="relative w-full max-w-lg bg-[#18181b] border border-white/10 rounded-2xl overflow-hidden shadow-2xl z-10 p-4">
+            <Command className="w-full text-white">
+              <Command.Input
+                placeholder="Type a command or search users..."
+                className="w-full px-4 py-3 bg-white/5 border border-white/5 focus:outline-none text-sm text-white rounded-xl placeholder-text-muted"
+              />
+              <Command.List className="max-h-64 overflow-y-auto mt-3 space-y-1 scrollbar-none">
+                <Command.Empty className="text-xs text-text-muted p-3">No results found.</Command.Empty>
+                
+                <Command.Group heading="Navigation Shortcuts" className="text-[10px] font-bold text-text-muted uppercase tracking-wider px-2 py-1.5 block">
+                  <Command.Item
+                    onSelect={() => { setActiveTab("overview"); setOpenCommand(false); }}
+                    className="flex items-center gap-2.5 px-3 py-2 text-xs font-semibold hover:bg-white/5 rounded-xl cursor-pointer"
+                  >
+                    Go to Dashboard Overview
+                  </Command.Item>
+                  <Command.Item
+                    onSelect={() => { setActiveTab("users"); setOpenCommand(false); }}
+                    className="flex items-center gap-2.5 px-3 py-2 text-xs font-semibold hover:bg-white/5 rounded-xl cursor-pointer"
+                  >
+                    Manage Users & Creators
+                  </Command.Item>
+                  <Command.Item
+                    onSelect={() => { setActiveTab("customizer"); setOpenCommand(false); }}
+                    className="flex items-center gap-2.5 px-3 py-2 text-xs font-semibold hover:bg-white/5 rounded-xl cursor-pointer"
+                  >
+                    Open Website Customizer
+                  </Command.Item>
+                  <Command.Item
+                    onSelect={() => { setActiveTab("theme"); setOpenCommand(false); }}
+                    className="flex items-center gap-2.5 px-3 py-2 text-xs font-semibold hover:bg-white/5 rounded-xl cursor-pointer"
+                  >
+                    Manage Website Themes
+                  </Command.Item>
+                </Command.Group>
+
+                <Command.Group heading="Audit Actions" className="text-[10px] font-bold text-text-muted uppercase tracking-wider px-2 py-1.5 block border-t border-white/5 mt-2 pt-2">
+                  <Command.Item
+                    onSelect={() => { setActiveTab("verifications"); setOpenCommand(false); }}
+                    className="flex items-center gap-2.5 px-3 py-2 text-xs font-semibold hover:bg-white/5 rounded-xl cursor-pointer"
+                  >
+                    Verify Creator Badges
+                  </Command.Item>
+                  <Command.Item
+                    onSelect={() => { setActiveTab("withdrawals"); setOpenCommand(false); }}
+                    className="flex items-center gap-2.5 px-3 py-2 text-xs font-semibold hover:bg-white/5 rounded-xl cursor-pointer"
+                  >
+                    Audit Creator Payouts
+                  </Command.Item>
+                </Command.Group>
+
+                <Command.Group heading="Quick User Action (Select to search/filter)" className="text-[10px] font-bold text-text-muted uppercase tracking-wider px-2 py-1.5 block border-t border-white/5 mt-2 pt-2">
+                  {usersList.slice(0, 10).map((u) => (
+                    <Command.Item
+                      key={u.id}
+                      onSelect={() => {
+                        setActiveTab("users");
+                        setSearchQuery(u.email);
+                        setOpenCommand(false);
+                      }}
+                      className="flex items-center justify-between px-3 py-2 text-xs font-semibold hover:bg-white/5 rounded-xl cursor-pointer"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Users className="w-3.5 h-3.5 text-text-muted" />
+                        <span>{u.name || u.email}</span>
+                      </div>
+                      <span className="text-[9px] bg-white/5 px-2 py-0.5 rounded text-text-muted font-mono uppercase tracking-wider">{u.role}</span>
+                    </Command.Item>
+                  ))}
+                </Command.Group>
+              </Command.List>
+            </Command>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

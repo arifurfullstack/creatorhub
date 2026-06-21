@@ -42,11 +42,47 @@ export default async function CreatorDashboardPage() {
     redirect("/dashboard/creator/setup");
   }
 
-  // Serialize Prisma Date fields to strings
+  // Load active subscriptions for this creator's plans
+  const subscriptions = await prisma.subscription.findMany({
+    where: {
+      plan: {
+        creatorProfileId: creator.id,
+      },
+    },
+    include: {
+      user: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          image: true,
+        },
+      },
+      plan: {
+        select: {
+          name: true,
+          price: true,
+        },
+      },
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
+
+  // Serialize Prisma Date fields to strings and load profile extensions
   const serializedCreator = {
     id: creator.id,
     username: creator.username,
     displayName: creator.displayName,
+    bio: creator.bio || "",
+    location: creator.location || "",
+    coverImage: creator.coverImage || "",
+    socialLinks: creator.socialLinks || "",
+    stripeAccountId: creator.stripeAccountId || "",
+    paypalEmail: creator.paypalEmail || "",
+    wiseEmail: creator.wiseEmail || "",
+    bankDetails: creator.bankDetails || "",
     plans: creator.plans.map((p) => ({
       id: p.id,
       name: p.name,
@@ -69,6 +105,20 @@ export default async function CreatorDashboardPage() {
       method: w.method,
       status: w.status,
       createdAt: w.createdAt.toISOString(),
+    })),
+    subscriptions: subscriptions.map((sub) => ({
+      id: sub.id,
+      status: sub.status,
+      currentPeriodEnd: sub.currentPeriodEnd.toISOString(),
+      user: {
+        name: sub.user.name,
+        email: sub.user.email,
+        image: sub.user.image,
+      },
+      plan: {
+        name: sub.plan.name,
+        price: sub.plan.price,
+      },
     })),
   };
 

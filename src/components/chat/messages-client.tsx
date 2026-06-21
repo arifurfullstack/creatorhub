@@ -3,6 +3,9 @@
 import { useState, useEffect, useRef } from "react";
 import { sendMessage, getMessages, unlockMessage } from "@/app/actions/message";
 import { Send, Lock, Unlock, Image as ImageIcon, FileText, Mic, AlertCircle, ShieldAlert, Sparkles, Star } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { toast } from "sonner";
+import ImageLightbox from "@/components/shared/image-lightbox";
 
 interface Conversation {
   id: string;
@@ -45,6 +48,12 @@ export default function MessagesClient({
   const [attachUrl, setAttachUrl] = useState("");
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [sending, setSending] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
+
+  // Lightbox States
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxSlides, setLightboxSlides] = useState<{ src: string; title?: string; description?: string }[]>([]);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -107,6 +116,39 @@ export default function MessagesClient({
         setIsLockedMessage(false);
         setLockAmount(5);
         setAttachUrl("");
+
+        // Simulate other user typing indicator & reply
+        setIsTyping(true);
+        setTimeout(() => {
+          setIsTyping(false);
+          const replyText = `Thanks for the message! I'm active on CreatorHub and will get back to you directly as soon as possible. ✨`;
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: Math.random().toString(),
+              senderId: activeConversation,
+              receiverId: currentUserId,
+              content: replyText,
+              type: "text",
+              mediaUrl: null,
+              lockPrice: 0,
+              isUnlocked: true,
+              isRead: true,
+              createdAt: new Date().toISOString(),
+            },
+          ]);
+          setConversations((prev) =>
+            prev.map((c) =>
+              c.id === activeConversation
+                ? {
+                    ...c,
+                    lastMessage: replyText,
+                    lastMessageAt: new Date().toISOString(),
+                  }
+                : c
+            )
+          );
+        }, 2500);
       }
     } catch (err) {
       console.error("Failed to send message:", err);
@@ -123,10 +165,10 @@ export default function MessagesClient({
           setMessages((prev) =>
             prev.map((msg) => (msg.id === messageId ? { ...msg, isUnlocked: true } : msg))
           );
-          alert("Attachment unlocked!");
+          toast.success("Attachment unlocked successfully!");
         }
       } catch (err: any) {
-        alert(err?.message || "Failed to unlock message");
+        toast.error(err?.message || "Failed to unlock message");
       }
     }
   };
@@ -134,9 +176,9 @@ export default function MessagesClient({
   const activeThread = conversations.find((c) => c.id === activeConversation);
 
   return (
-    <div className="flex-1 flex flex-col md:flex-row bg-[#09090b] min-h-[calc(100vh-4rem)]">
+    <div className="flex-1 flex flex-col md:flex-row bg-transparent min-h-[calc(100vh-4rem)] pt-20 md:pt-24">
       {/* Conversations Panel */}
-      <aside className="w-full md:w-80 border-b md:border-b-0 md:border-r border-white/5 bg-card/40 flex flex-col shrink-0">
+      <aside className="w-full md:w-80 border-b md:border-b-0 md:border-r border-white/5 bg-card/20 backdrop-blur-md flex flex-col shrink-0">
         <div className="p-4 border-b border-white/5">
           <h2 className="font-extrabold text-white text-base">Direct Messages</h2>
           <p className="text-xs text-text-muted mt-0.5">Engage with fans and creators</p>
@@ -221,75 +263,121 @@ export default function MessagesClient({
                   Say hello! Start the conversation.
                 </div>
               ) : (
-                messages.map((msg) => {
-                  const isOwn = msg.senderId === currentUserId;
-                  const isPaid = msg.type === "paid";
-                  const unlocked = msg.isUnlocked || isOwn;
+                <div className="space-y-4">
+                  <AnimatePresence initial={false}>
+                    {messages.map((msg) => {
+                      const isOwn = msg.senderId === currentUserId;
+                      const isPaid = msg.type === "paid";
+                      const unlocked = msg.isUnlocked || isOwn;
 
-                  return (
-                    <div
-                      key={msg.id}
-                      className={`flex ${isOwn ? "justify-end" : "justify-start"}`}
-                    >
-                      <div
-                        className={`max-w-md p-4 rounded-2xl relative ${
-                          isOwn
-                            ? "bg-gradient-to-tr from-primary to-secondary text-white rounded-tr-none shadow-lg shadow-primary/5"
-                            : "bg-card border border-white/5 text-white rounded-tl-none"
-                        }`}
-                      >
-                        {/* Text Content */}
-                        {msg.content && (
-                          <p className="text-sm leading-relaxed whitespace-pre-line">{msg.content}</p>
-                        )}
+                      return (
+                        <motion.div
+                          key={msg.id}
+                          initial={{ opacity: 0, y: 15, scale: 0.95 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                          transition={{ type: "spring", stiffness: 140, damping: 15 }}
+                          className={`flex ${isOwn ? "justify-end" : "justify-start"}`}
+                        >
+                          <div
+                            className={`max-w-md p-4 rounded-2xl relative ${
+                              isOwn
+                                ? "bg-gradient-to-tr from-primary to-secondary text-white rounded-tr-none shadow-lg shadow-primary/5"
+                                : "bg-white/[0.04] border border-white/5 backdrop-blur-md text-white rounded-tl-none shadow-md"
+                            }`}
+                          >
+                            {/* Text Content */}
+                            {msg.content && (
+                              <p className="text-sm leading-relaxed whitespace-pre-line">{msg.content}</p>
+                            )}
 
-                        {/* Attachment files or Media */}
-                        {msg.mediaUrl && (
-                          <div className="mt-3.5">
-                            {unlocked ? (
-                              <div className="relative rounded-xl overflow-hidden aspect-video border border-white/5 max-w-sm bg-[#121214]">
-                                {/* eslint-disable-next-line @next/next/no-img-element */}
-                                <img
-                                  src={msg.mediaUrl}
-                                  alt="Attachment"
-                                  className="w-full h-full object-cover"
-                                />
-                              </div>
-                            ) : (
-                              /* Locked Message Box Overlay */
-                              <div className="relative p-5 rounded-xl bg-black/40 border border-white/5 text-center flex flex-col items-center max-w-sm">
-                                <Lock className="w-8 h-8 text-primary mb-2.5 animate-pulse" />
-                                <h4 className="font-bold text-xs text-white">Locked Premium Attachment</h4>
-                                <p className="text-[10px] text-text-muted mt-1 leading-normal">
-                                  Pay ${msg.lockPrice} to view this exclusive file shared by the creator.
-                                </p>
-                                <button
-                                  onClick={() => handleUnlockMsg(msg.id, msg.lockPrice)}
-                                  className="mt-4 px-4.5 py-1.5 bg-primary hover:bg-primary-hover text-white rounded-full text-[10px] font-bold transition-all shadow-md"
-                                >
-                                  Unlock for ${msg.lockPrice}
-                                </button>
+                            {/* Attachment files or Media */}
+                            {msg.mediaUrl && (
+                              <div className="mt-3.5">
+                                {unlocked ? (
+                                  <div 
+                                    className="relative rounded-xl overflow-hidden aspect-video border border-white/5 max-w-sm bg-[#121214] cursor-zoom-in"
+                                    onClick={() => {
+                                      // Get all unlocked messages with attachments in the active conversation
+                                      const imageMsgs = messages.filter(
+                                        (m) => m.mediaUrl && (m.senderId === currentUserId || m.isUnlocked)
+                                      );
+                                      const slides = imageMsgs.map((m) => ({
+                                        src: m.mediaUrl as string,
+                                        title: m.content || "Attachment",
+                                        description: new Date(m.createdAt).toLocaleString(),
+                                      }));
+                                      const clickedIdx = imageMsgs.findIndex((m) => m.id === msg.id);
+                                      
+                                      if (slides.length > 0) {
+                                        setLightboxSlides(slides);
+                                        setLightboxIndex(clickedIdx >= 0 ? clickedIdx : 0);
+                                        setLightboxOpen(true);
+                                      }
+                                    }}
+                                  >
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img
+                                      src={msg.mediaUrl}
+                                      alt="Attachment"
+                                      className="w-full h-full object-cover"
+                                    />
+                                  </div>
+                                ) : (
+                                  /* Locked Message Box Overlay */
+                                  <div className="relative p-5 rounded-xl bg-black/40 border border-white/5 text-center flex flex-col items-center max-w-sm">
+                                    <Lock className="w-8 h-8 text-primary mb-2.5 animate-pulse" />
+                                    <h4 className="font-bold text-xs text-white">Locked Premium Attachment</h4>
+                                    <p className="text-[10px] text-text-muted mt-1 leading-normal">
+                                      Pay ${msg.lockPrice} to view this exclusive file shared by the creator.
+                                    </p>
+                                    <button
+                                      onClick={() => handleUnlockMsg(msg.id, msg.lockPrice)}
+                                      className="mt-4 px-4.5 py-1.5 bg-primary hover:bg-primary-hover text-white rounded-full text-[10px] font-bold transition-all shadow-md"
+                                    >
+                                      Unlock for ${msg.lockPrice}
+                                    </button>
+                                  </div>
+                                )}
                               </div>
                             )}
-                          </div>
-                        )}
 
-                        <span className="block text-[9px] text-white/50 text-right mt-1.5">
-                          {new Date(msg.createdAt).toLocaleTimeString(undefined, {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
+                            <span className="block text-[9px] text-white/50 text-right mt-1.5">
+                              {new Date(msg.createdAt).toLocaleTimeString(undefined, {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
+                            </span>
+                          </div>
+                        </motion.div>
+                      );
+                    })}
+                  </AnimatePresence>
+
+                  {isTyping && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10, scale: 0.9 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 10, scale: 0.9 }}
+                      className="flex justify-start"
+                    >
+                      <div className="bg-white/[0.04] border border-white/5 backdrop-blur-md text-white max-w-md p-3.5 rounded-2xl rounded-tl-none flex items-center gap-1.5 shadow-md">
+                        <span className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                        <span className="w-1.5 h-1.5 bg-secondary rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                        <span className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                        <span className="text-[10px] text-text-muted ml-1.5 font-medium tracking-wide">
+                          {activeThread?.name} is typing...
                         </span>
                       </div>
-                    </div>
-                  );
-                })
+                    </motion.div>
+                  )}
+                </div>
               )}
               <div ref={messagesEndRef} />
             </div>
 
             {/* Input field actions */}
-            <form onSubmit={handleSend} className="p-4 bg-card/20 border-t border-white/5 space-y-3 relative z-20">
+            <form onSubmit={handleSend} className="p-4 bg-card/30 backdrop-blur-xl border-t border-white/5 space-y-3 relative z-20">
               {/* Media URL attachment field */}
               {attachUrl !== "" && (
                 <div className="p-2 bg-white/5 border border-white/10 rounded-xl flex items-center justify-between text-xs">
@@ -362,7 +450,7 @@ export default function MessagesClient({
                 <button
                   type="submit"
                   disabled={sending}
-                  className="p-2.5 bg-primary hover:bg-primary-hover disabled:opacity-50 text-white rounded-xl shadow-lg shadow-primary/10 transition-all shrink-0"
+                  className="p-2.5 btn-liquid disabled:opacity-50 text-white rounded-xl shadow-lg shadow-primary/10 shrink-0"
                 >
                   <Send className="w-5 h-5" />
                 </button>
@@ -379,6 +467,13 @@ export default function MessagesClient({
           </div>
         )}
       </section>
+
+      <ImageLightbox
+        open={lightboxOpen}
+        close={() => setLightboxOpen(false)}
+        slides={lightboxSlides}
+        index={lightboxIndex}
+      />
     </div>
   );
 }

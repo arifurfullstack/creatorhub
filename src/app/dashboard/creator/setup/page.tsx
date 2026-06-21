@@ -63,74 +63,60 @@ export default function CreatorSetupPage() {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-5">
-          <div>
-            <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">
-              Creator Name (Display Name)
-            </label>
-            <div className="relative">
-              <User className="absolute left-3 top-3.5 w-5 h-5 text-text-muted" />
-              <input
-                type="text"
-                required
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-                placeholder="Aria Vance"
-                className="w-full pl-10 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-all text-white placeholder-white/20"
-              />
-            </div>
+          <div className="floating-input-group">
+            <input
+              type="text"
+              required
+              value={displayName}
+              onChange={(e) => setDisplayName(e.target.value)}
+              placeholder=" "
+              className="floating-input"
+            />
+            <User className="floating-input-icon text-text-muted" />
+            <label className="floating-label">Creator Name (Display Name)</label>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">
-              Choose Handle (Username)
-            </label>
-            <div className="relative">
-              <AtSign className="absolute left-3 top-3.5 w-5 h-5 text-text-muted" />
+            <div className="floating-input-group">
               <input
                 type="text"
                 required
                 value={username}
                 onChange={(e) => setUsername(e.target.value.replace(/\s+/g, ""))}
-                placeholder="ariavance"
-                className="w-full pl-10 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-all text-white placeholder-white/20"
+                placeholder=" "
+                className="floating-input"
               />
+              <AtSign className="floating-input-icon text-text-muted" />
+              <label className="floating-label">Choose Handle (Username)</label>
             </div>
             <p className="text-[10px] text-text-muted mt-1.5 ml-1">
               Your profile link will be: creatorhub.com/creator/{username || "handle"}
             </p>
           </div>
 
-          <div>
-            <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">
-              Bio
-            </label>
-            <div className="relative">
-              <FileText className="absolute left-3 top-3.5 w-5 h-5 text-text-muted" />
-              <textarea
-                required
-                value={bio}
-                onChange={(e) => setBio(e.target.value)}
-                placeholder="Digital artist creating 3D environments and shader assets. Subscribe for weekly workflow breakdowns."
-                rows={3}
-                className="w-full pl-10 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-all text-white placeholder-white/20 resize-none"
-              />
-            </div>
+          <div className="floating-input-group">
+            <textarea
+              required
+              value={bio}
+              onChange={(e) => setBio(e.target.value)}
+              placeholder=" "
+              rows={3}
+              className="floating-textarea pl-[2.75rem]"
+            />
+            <FileText className="floating-input-icon text-text-muted" />
+            <label className="floating-label">Bio</label>
           </div>
 
-          <div>
-            <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">
-              Location
-            </label>
-            <div className="relative">
-              <MapPin className="absolute left-3 top-3.5 w-5 h-5 text-text-muted" />
-              <input
-                type="text"
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                placeholder="New York, NY"
-                className="w-full pl-10 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-all text-white placeholder-white/20"
-              />
-            </div>
+          <div className="floating-input-group">
+            <input
+              type="text"
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+              placeholder=" "
+              className="floating-input"
+            />
+            <MapPin className="floating-input-icon text-text-muted" />
+            <label className="floating-label">Location</label>
           </div>
 
           <button

@@ -66,3 +66,18 @@ export async function createCreatorProfile(formData: {
 
   return { success: true, username: usernameClean };
 }
+
+export async function getCreatorUsername() {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+
+  if (!session) return null;
+
+  const profile = await prisma.creatorProfile.findUnique({
+    where: { userId: session.user.id },
+    select: { username: true },
+  });
+
+  return profile?.username || null;
+}

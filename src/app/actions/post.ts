@@ -11,6 +11,9 @@ export async function createPost(formData: {
   visibility: string;
   price: number;
   mediaUrl?: string;
+  mediaType?: string;
+  fileName?: string;
+  fileSize?: number;
 }) {
   const session = await auth.api.getSession({
     headers: await headers(),
@@ -47,10 +50,10 @@ export async function createPost(formData: {
     await prisma.postMedia.create({
       data: {
         postId: post.id,
-        type: "image",
+        type: formData.mediaType || "image",
         url: formData.mediaUrl.trim(),
-        fileName: "creator_upload.jpg",
-        fileSize: 524000,
+        fileName: formData.fileName || "creator_upload.jpg",
+        fileSize: formData.fileSize || 524000,
       },
     });
   }
