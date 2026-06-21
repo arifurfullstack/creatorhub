@@ -6,6 +6,7 @@ import { Send, Lock, Unlock, Image as ImageIcon, FileText, Mic, AlertCircle, Shi
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import ImageLightbox from "@/components/shared/image-lightbox";
+import VideoPlayer from "@/components/shared/video-player";
 
 interface Conversation {
   id: string;
@@ -295,34 +296,42 @@ export default function MessagesClient({
                             {msg.mediaUrl && (
                               <div className="mt-3.5">
                                 {unlocked ? (
-                                  <div 
-                                    className="relative rounded-xl overflow-hidden aspect-video border border-white/5 max-w-sm bg-[#121214] cursor-zoom-in"
-                                    onClick={() => {
-                                      // Get all unlocked messages with attachments in the active conversation
-                                      const imageMsgs = messages.filter(
-                                        (m) => m.mediaUrl && (m.senderId === currentUserId || m.isUnlocked)
-                                      );
-                                      const slides = imageMsgs.map((m) => ({
-                                        src: m.mediaUrl as string,
-                                        title: m.content || "Attachment",
-                                        description: new Date(m.createdAt).toLocaleString(),
-                                      }));
-                                      const clickedIdx = imageMsgs.findIndex((m) => m.id === msg.id);
-                                      
-                                      if (slides.length > 0) {
-                                        setLightboxSlides(slides);
-                                        setLightboxIndex(clickedIdx >= 0 ? clickedIdx : 0);
-                                        setLightboxOpen(true);
-                                      }
-                                    }}
-                                  >
-                                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                                    <img
-                                      src={msg.mediaUrl}
-                                      alt="Attachment"
-                                      className="w-full h-full object-cover"
-                                    />
-                                  </div>
+                                  msg.mediaUrl.toLowerCase().match(/\.(mp4|webm|ogg|mov|m4v)$/) || msg.type === "video" ? (
+                                    <div className="max-w-sm w-full">
+                                      <VideoPlayer src={msg.mediaUrl} />
+                                    </div>
+                                  ) : (
+                                    <div 
+                                      className="relative rounded-xl overflow-hidden aspect-video border border-white/5 max-w-sm bg-[#121214] cursor-zoom-in"
+                                      onClick={() => {
+                                        // Get all unlocked messages with attachments (excluding videos) in the active conversation
+                                        const imageMsgs = messages.filter(
+                                          (m) => m.mediaUrl && 
+                                                 !(m.mediaUrl.toLowerCase().match(/\.(mp4|webm|ogg|mov|m4v)$/) || m.type === "video") &&
+                                                 (m.senderId === currentUserId || m.isUnlocked)
+                                        );
+                                        const slides = imageMsgs.map((m) => ({
+                                          src: m.mediaUrl as string,
+                                          title: m.content || "Attachment",
+                                          description: new Date(m.createdAt).toLocaleString(),
+                                        }));
+                                        const clickedIdx = imageMsgs.findIndex((m) => m.id === msg.id);
+                                        
+                                        if (slides.length > 0) {
+                                          setLightboxSlides(slides);
+                                          setLightboxIndex(clickedIdx >= 0 ? clickedIdx : 0);
+                                          setLightboxOpen(true);
+                                        }
+                                      }}
+                                    >
+                                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                                      <img
+                                        src={msg.mediaUrl}
+                                        alt="Attachment"
+                                        className="w-full h-full object-cover"
+                                      />
+                                    </div>
+                                  )
                                 ) : (
                                   /* Locked Message Box Overlay */
                                   <div className="relative p-5 rounded-xl bg-black/40 border border-white/5 text-center flex flex-col items-center max-w-sm">

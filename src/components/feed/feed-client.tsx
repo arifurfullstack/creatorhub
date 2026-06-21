@@ -31,6 +31,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import ImageLightbox from "@/components/shared/image-lightbox";
+import VideoPlayer from "@/components/shared/video-player";
 import { createPost, createComment, getPostComments } from "@/app/actions/post";
 import { updateFanProfile } from "@/app/actions/fan";
 
@@ -534,13 +535,7 @@ export default function FeedClient({
                         {post.media.length > 0 && (
                           <div className="relative rounded-2xl overflow-hidden border border-white/5 bg-[#121214]">
                             {post.media[0].type === "video" ? (
-                              <div className="relative aspect-video w-full h-full bg-black">
-                                <video
-                                  src={post.media[0].url}
-                                  controls
-                                  className="w-full h-full object-contain"
-                                />
-                              </div>
+                              <VideoPlayer src={post.media[0].url} />
                             ) : post.media[0].type === "audio" ? (
                               <div className="p-4 flex flex-col gap-2 bg-white/[0.02]">
                                 <div className="flex items-center gap-3">
