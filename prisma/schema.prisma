@@ -1,0 +1,393 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ==========================================
+// 1. BETTER AUTH CORE MODELS
+// ==========================================
+
+model User {
+  id            String    @id @default(uuid())
+  name          String
+  email         String    @unique
+  emailVerified Boolean   @default(false)
+  image         String?
+  role          String    @default("fan") // "fan" | "creator" | "moderator" | "admin"
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  sessions      Session[]
+  accounts      Account[]
+  
+  // Custom creator association
+  creatorProfile CreatorProfile?
+
+  // Fan interactions
+  subscriptions Subscription[]
+  likes         Like[]
+  comments      Comment[]
+  bookmarks     Bookmark[]
+  follows       Follow[]
+  purchases     Purchase[]
+  reports       Report[]
+  auditLogs     AuditLog[]
+
+  // Messaging relations
+  sentMessages     Message[] @relation("SentMessages")
+  receivedMessages Message[] @relation("ReceivedMessages")
+}
+
+model Session {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  expiresAt DateTime
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Account {
+  id                    String    @id @default(uuid())
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accountId             String
+  providerId            String
+  accessToken           String?
+  refreshToken          String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+}
+
+model Verification {
+  id         String   @id @default(uuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+// ==========================================
+// 2. CREATOR PROFILE & MEMBERSHIPS
+// ==========================================
+
+model CreatorProfile {
+  id             String   @id @default(uuid())
+  userId         String   @unique
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  username       String   @unique
+  displayName    String
+  bio            String?
+  location       String?
+  coverImage     String?
+  isVerified     Boolean  @default(false)
+  
+  // Stats
+  followerCount  Int      @default(0)
+  subscriberCount Int     @default(0)
+  postCount      Int      @default(0)
+  
+  // Financial info
+  stripeAccountId String?
+  paypalEmail     String?
+  wiseEmail       String?
+  bankDetails     String? // Formatted JSON string
+
+  // Social Links
+  socialLinks    String? // Formatted JSON string: { twitter, instagram, youtube, etc. }
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relations
+  plans          MembershipPlan[]
+  posts          Post[]
+  follows        Follow[]
+  transactions   Transaction[]
+  withdrawals    WithdrawalRequest[]
+}
+
+model MembershipPlan {
+  id               String   @id @default(uuid())
+  creatorProfileId String
+  creatorProfile   CreatorProfile @relation(fields: [creatorProfileId], references: [id], onDelete: Cascade)
+  name             String   // e.g. "Basic", "Premium", "VIP"
+  price            Float    // Price in USD per month
+  description      String?
+  benefits         String[] // Array of features included
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  subscriptions    Subscription[]
+}
+
+model Subscription {
+  id             String         @id @default(uuid())
+  userId         String
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  planId         String
+  plan           MembershipPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  status         String         // "active" | "canceled" | "expired" | "past_due"
+  stripeSubId    String?        @unique
+  currentPeriodStart DateTime
+  currentPeriodEnd   DateTime
+  cancelAtPeriodEnd  Boolean    @default(false)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+}
+
+model Follow {
+  id               String   @id @default(uuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  creatorProfileId String
+  creatorProfile   CreatorProfile @relation(fields: [creatorProfileId], references: [id], onDelete: Cascade)
+  createdAt        DateTime @default(now())
+
+  @@unique([userId, creatorProfileId])
+}
+
+// ==========================================
+// 3. CONTENT & INTERACTIONS
+// ==========================================
+
+model Post {
+  id               String   @id @default(uuid())
+  creatorProfileId String
+  creatorProfile   CreatorProfile @relation(fields: [creatorProfileId], references: [id], onDelete: Cascade)
+  title            String
+  content          String?  // HTML or Markdown
+  visibility       String   @default("public") // "public" | "followers" | "subscribers" | "locked"
+  price            Float    @default(0.0) // If visbility is "locked"
+  status           String   @default("published") // "published" | "scheduled" | "draft"
+  scheduledAt      DateTime?
+  likesCount       Int      @default(0)
+  commentsCount    Int      @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  // Relations
+  media            PostMedia[]
+  likes            Like[]
+  comments         Comment[]
+  bookmarks        Bookmark[]
+  purchases        Purchase[]
+  categories       CategoryOnPost[]
+  tags             TagOnPost[]
+}
+
+model PostMedia {
+  id         String   @id @default(uuid())
+  postId     String
+  post       Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  type       String   // "image" | "video" | "audio" | "document" | "zip"
+  url        String   // R2/S3 URL for full access
+  previewUrl String?  // Optional watermarked/low-res preview URL for locked content
+  fileName   String?
+  fileSize   Int?
+  createdAt  DateTime @default(now())
+}
+
+model Like {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, postId])
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  parentId  String?  // Self-relation for replies
+  parent    Comment? @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies   Comment[] @relation("CommentReplies")
+  content   String
+  isPinned  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Bookmark {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, postId])
+}
+
+// ==========================================
+// 4. CATEGORIES & TAGS
+// ==========================================
+
+model Category {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  slug        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+
+  posts       CategoryOnPost[]
+}
+
+model CategoryOnPost {
+  postId     String
+  post       Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([postId, categoryId])
+}
+
+model Tag {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+
+  posts     TagOnPost[]
+}
+
+model TagOnPost {
+  postId String
+  post   Post   @relation(fields: [postId], references: [id], onDelete: Cascade)
+  tagId  String
+  tag    Tag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([postId, tagId])
+}
+
+// ==========================================
+// 5. MESSAGING & CHAT SYSTEM
+// ==========================================
+
+model Message {
+  id          String   @id @default(uuid())
+  senderId    String
+  sender      User     @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  receiverId  String
+  receiver    User     @relation("ReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
+  content     String?
+  type        String   @default("text") // "text" | "image" | "file" | "voice" | "paid"
+  mediaUrl    String?
+  isRead      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  // Paid messages feature
+  lockPrice   Float    @default(0.0)
+  isUnlocked  Boolean  @default(false)
+  purchases   Purchase[]
+}
+
+// ==========================================
+// 6. FINANCIAL & TRANSACTIONS
+// ==========================================
+
+model Purchase {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  postId      String?
+  post        Post?    @relation(fields: [postId], references: [id], onDelete: SetNull)
+  
+  messageId   String?
+  message     Message? @relation(fields: [messageId], references: [id], onDelete: SetNull)
+  
+  amount      Float
+  createdAt   DateTime @default(now())
+
+  transactions Transaction[]
+}
+
+model Transaction {
+  id               String   @id @default(uuid())
+  creatorProfileId String
+  creatorProfile   CreatorProfile @relation(fields: [creatorProfileId], references: [id], onDelete: Cascade)
+  purchaseId       String?
+  purchase         Purchase? @relation(fields: [purchaseId], references: [id], onDelete: SetNull)
+  amount           Float    // Gross amount
+  commissionAmount Float    // Platform cut
+  netAmount        Float    // Amount for creator
+  type             String   // "subscription" | "locked_content" | "tip" | "withdrawal"
+  status           String   @default("pending") // "pending" | "success" | "failed"
+  createdAt        DateTime @default(now())
+}
+
+model WithdrawalRequest {
+  id               String   @id @default(uuid())
+  creatorProfileId String
+  creatorProfile   CreatorProfile @relation(fields: [creatorProfileId], references: [id], onDelete: Cascade)
+  amount           Float
+  method           String   // "bank_transfer" | "paypal" | "wise"
+  details          String   // JSON string of payment details
+  status           String   @default("pending") // "pending" | "approved" | "rejected" | "held"
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+// ==========================================
+// 7. NOTIFICATIONS, MODERATION & SECURITY
+// ==========================================
+
+model Notification {
+  id          String   @id @default(uuid())
+  userId      String   // Target user
+  type        String   // "new_subscriber" | "new_follower" | "like" | "comment" | "purchase" | "message" | "announcement"
+  title       String
+  content     String
+  link        String?
+  isRead      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+}
+
+model Report {
+  id          String   @id @default(uuid())
+  reporterId  String
+  reporter    User     @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+  targetType  String   // "post" | "comment" | "user"
+  targetId    String   // ID of the post, comment, or user being reported
+  reason      String
+  status      String   @default("pending") // "pending" | "resolved" | "ignored"
+  actionTaken String?
+  createdAt   DateTime @default(now())
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  action    String   // e.g. "ban_user", "delete_post", "approve_withdrawal"
+  details   String?  // Extra info
+  createdAt DateTime @default(now())
+}
+
+model SystemSetting {
+  id                  String   @id @default(uuid())
+  key                 String   @unique // e.g. "commission_rate", "min_withdrawal_amount"
+  value               String
+  description         String?
+  updatedAt           DateTime @updatedAt
+}

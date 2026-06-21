@@ -1,0 +1,118 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #FF4FA3;
+  --color-primary-hover: #FF1A84;
+  --color-secondary: #FF79C6;
+  --color-accent: #FFC0E1;
+  --color-background: #09090B;
+  --color-surface: #18181B;
+  --color-card: #222226;
+  --color-text-main: #FFFFFF;
+  --color-text-muted: #A1A1AA;
+  --color-success: #22C55E;
+  --color-danger: #EF4444;
+  --color-warning: #F59E0B;
+  --color-border-custom: #2E2E33;
+}
+
+:root {
+  --background: #09090B;
+  --foreground: #FFFFFF;
+  
+  --primary: #FF4FA3;
+  --primary-foreground: #FFFFFF;
+  
+  --secondary: #FF79C6;
+  --secondary-foreground: #09090B;
+  
+  --card: #18181B;
+  --card-foreground: #FFFFFF;
+  
+  --popover: #18181B;
+  --popover-foreground: #FFFFFF;
+  
+  --muted: #222226;
+  --muted-foreground: #A1A1AA;
+  
+  --accent: #2E2E33;
+  --accent-foreground: #FFC0E1;
+  
+  --destructive: #EF4444;
+  --destructive-foreground: #FFFFFF;
+  
+  --border: #2E2E33;
+  --input: #2E2E33;
+  --ring: #FF4FA3;
+  
+  --radius: 0.75rem;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Luxury Premium Utilities */
+.glassmorphism {
+  background: rgba(24, 24, 27, 0.65);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.glassmorphism-light {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.gradient-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(120px);
+  opacity: 0.15;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.gradient-border {
+  position: relative;
+  border-radius: var(--radius);
+  background: linear-gradient(135deg, #FF4FA3, #FF79C6);
+  padding: 1px;
+}
+
+.gradient-border-content {
+  background: #18181B;
+  border-radius: calc(var(--radius) - 1px);
+}
+
+.text-gradient {
+  background: linear-gradient(135deg, #FF4FA3 0%, #FF79C6 50%, #FFC0E1 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #09090B;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #2E2E33;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #FF4FA3;
+}
