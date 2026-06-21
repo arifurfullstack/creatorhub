@@ -21,6 +21,7 @@ import {
   FileImage,
   X,
   Check,
+  Sparkles,
 } from "lucide-react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
@@ -711,60 +712,142 @@ export default function FeedClient({
             </Link>
           </div>
 
-          {/* Creator Upload Content Widget */}
+          {/* Creator Upload Content Widget (Enhanced Apple Liquid Glass) */}
           {sessionUser && sessionUser.role === "creator" && (
-            <div className="glass-card-premium p-5 rounded-3xl shadow-xl space-y-4 border border-white/10 mt-6">
-              <div className="flex items-center gap-3">
-                <div className="p-3 bg-primary/10 text-primary rounded-2xl shrink-0">
-                  <UploadCloud className="w-5 h-5 animate-pulse" />
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              whileHover={{ y: -4 }}
+              className="glass-card-premium p-6 rounded-3xl shadow-2xl border border-white/10 mt-6 relative overflow-hidden group"
+            >
+              {/* Decorative radial glows */}
+              <div className="absolute -top-12 -left-12 w-24 h-24 bg-primary/20 rounded-full blur-2xl group-hover:bg-primary/30 transition-all duration-500" />
+              <div className="absolute -bottom-12 -right-12 w-24 h-24 bg-secondary/10 rounded-full blur-2xl group-hover:bg-secondary/20 transition-all duration-500" />
+
+              <div className="relative z-10 space-y-4">
+                <div className="flex items-center gap-3.5">
+                  <div className="p-3 bg-gradient-to-tr from-primary/20 to-secondary/10 text-primary rounded-2xl shrink-0 shadow-inner border border-primary/20 animate-float">
+                    <UploadCloud className="w-5 h-5 text-primary" />
+                  </div>
+                  <div>
+                    <h4 className="font-extrabold text-white text-sm leading-snug tracking-tight flex items-center gap-1.5">
+                      Creator Studio
+                      <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-ping" />
+                    </h4>
+                    <p className="text-[10px] text-text-muted mt-0.5">Instant multi-media distribution</p>
+                  </div>
                 </div>
-                <div>
-                  <h4 className="font-extrabold text-white text-sm leading-snug">Creator Upload</h4>
-                  <p className="text-[10px] text-text-muted mt-0.5">Share new content with your fans</p>
+
+                {/* Upload Details Table */}
+                <div className="space-y-2 bg-white/[0.02] border border-white/5 p-3 rounded-2xl text-[10px] text-text-muted leading-relaxed">
+                  <div className="flex justify-between items-center">
+                    <span>File Types Supported</span>
+                    <span className="font-bold text-white uppercase">Image, Video, Audio</span>
+                  </div>
+                  <div className="h-px bg-white/5" />
+                  <div className="flex justify-between items-center">
+                    <span>Gating Controls</span>
+                    <span className="font-bold text-white">Public / Followers / Locked</span>
+                  </div>
+                  <div className="h-px bg-white/5" />
+                  <div className="flex justify-between items-center">
+                    <span>Storage Status</span>
+                    <span className="font-bold text-green-400">98.2 GB Available</span>
+                  </div>
                 </div>
+
+                <button
+                  onClick={() => setUploadModalOpen(true)}
+                  className="w-full py-3 btn-liquid text-white rounded-xl text-xs font-black flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-primary/20 animate-glow"
+                >
+                  <Plus className="w-4 h-4 text-white" />
+                  Upload Gated Content
+                </button>
               </div>
-              <button
-                onClick={() => setUploadModalOpen(true)}
-                className="w-full py-2.5 btn-liquid text-white rounded-xl text-xs font-black flex items-center justify-center gap-1.5 cursor-pointer shadow-lg shadow-primary/15"
-              >
-                <Plus className="w-4 h-4" />
-                Create New Post
-              </button>
-            </div>
+            </motion.div>
           )}
 
-          {/* Fan Statistics Profile Widget */}
+          {/* Fan Statistics Profile Widget (Enhanced Apple Liquid Glass) */}
           {sessionUser && sessionUser.role === "fan" && (
-            <div className="glass-card-premium p-5 rounded-3xl shadow-xl space-y-4 border border-white/10 mt-6">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-primary to-secondary flex items-center justify-center font-bold text-white overflow-hidden shadow border border-white/10 shrink-0">
-                  {sessionUser.image ? (
-                    <img src={sessionUser.image} alt={sessionUser.name} className="w-full h-full object-cover" />
-                  ) : (
-                    (sessionUser.name || "F").charAt(0).toUpperCase()
-                  )}
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              whileHover={{ y: -4 }}
+              className="glass-card-premium p-6 rounded-3xl shadow-2xl border border-white/10 mt-6 relative overflow-hidden group"
+            >
+              {/* Decorative radial glows */}
+              <div className="absolute -top-16 -right-16 w-32 h-32 bg-secondary/15 rounded-full blur-3xl group-hover:bg-secondary/20 transition-all duration-500" />
+              <div className="absolute -bottom-16 -left-16 w-32 h-32 bg-primary/10 rounded-full blur-3xl group-hover:bg-primary/15 transition-all duration-500" />
+
+              <div className="relative z-10 space-y-4">
+                <div className="flex items-center gap-3">
+                  <div className="relative shrink-0 select-none">
+                    <div className="w-12 h-12 rounded-full p-[2px] bg-gradient-to-tr from-primary to-secondary shadow-lg">
+                      <div className="w-full h-full rounded-full overflow-hidden bg-background border border-background">
+                        {sessionUser.image ? (
+                          <img src={sessionUser.image} alt={sessionUser.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center font-bold text-white text-sm bg-card">
+                            {(sessionUser.name || "F").charAt(0).toUpperCase()}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <span className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-primary flex items-center justify-center text-[8px] text-white border-2 border-background font-black animate-float shadow">
+                      ★
+                    </span>
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h4 className="font-extrabold text-white text-sm truncate leading-none">{sessionUser.name}</h4>
+                    <span className="text-[9px] font-black uppercase tracking-wider text-secondary mt-1 block">Premium Supporter</span>
+                  </div>
                 </div>
-                <div className="min-w-0 flex-1">
-                  <h4 className="font-extrabold text-white text-sm truncate leading-snug">{sessionUser.name}</h4>
-                  <span className="text-[9px] font-black uppercase tracking-wider text-secondary bg-secondary/10 px-2 py-0.5 rounded">Premium Fan</span>
+
+                {/* Interactive stats grid */}
+                <div className="grid grid-cols-3 gap-2 text-center">
+                  <motion.div 
+                    whileHover={{ scale: 1.05 }}
+                    className="bg-white/5 p-2 rounded-2xl border border-white/5 shadow-inner hover:border-primary/30 transition-colors"
+                  >
+                    <p className="text-[8px] text-text-muted font-black uppercase tracking-wider">Unlocked</p>
+                    <p className="text-sm font-black text-white mt-1.5 text-gradient">{unlockedPosts.length}</p>
+                  </motion.div>
+                  <motion.div 
+                    whileHover={{ scale: 1.05 }}
+                    className="bg-white/5 p-2 rounded-2xl border border-white/5 shadow-inner hover:border-primary/30 transition-colors"
+                  >
+                    <p className="text-[8px] text-text-muted font-black uppercase tracking-wider">Following</p>
+                    <p className="text-sm font-black text-white mt-1.5 text-gradient">{followedCreators.length}</p>
+                  </motion.div>
+                  <motion.div 
+                    whileHover={{ scale: 1.05 }}
+                    className="bg-white/5 p-2 rounded-2xl border border-white/5 shadow-inner hover:border-primary/30 transition-colors"
+                  >
+                    <p className="text-[8px] text-text-muted font-black uppercase tracking-wider">Likes</p>
+                    <p className="text-sm font-black text-white mt-1.5 text-gradient">{likedPosts.length}</p>
+                  </motion.div>
+                </div>
+
+                {/* Engagement / Loyalty Progress Bar */}
+                <div className="space-y-1.5 bg-white/[0.02] border border-white/5 p-3 rounded-2xl">
+                  <div className="flex justify-between items-center text-[9px] text-text-muted">
+                    <span className="font-bold text-white flex items-center gap-1">
+                      <Sparkles className="w-3 h-3 text-secondary animate-pulse" />
+                      Fan Loyalty Level 3
+                    </span>
+                    <span>150 XP to Level 4</span>
+                  </div>
+                  <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden p-[1px] border border-white/5">
+                    <motion.div 
+                      initial={{ width: 0 }}
+                      animate={{ width: "65%" }}
+                      transition={{ duration: 1, ease: "easeOut" }}
+                      className="h-full bg-gradient-to-r from-primary to-secondary rounded-full"
+                    />
+                  </div>
                 </div>
               </div>
-              
-              <div className="grid grid-cols-3 gap-2 text-center pt-2 border-t border-white/5">
-                <div className="bg-white/5 p-2 rounded-xl border border-white/5">
-                  <p className="text-[9px] text-text-muted font-bold uppercase tracking-wider">Unlocked</p>
-                  <p className="text-sm font-black text-white mt-1">{unlockedPosts.length}</p>
-                </div>
-                <div className="bg-white/5 p-2 rounded-xl border border-white/5">
-                  <p className="text-[9px] text-text-muted font-bold uppercase tracking-wider">Following</p>
-                  <p className="text-sm font-black text-white mt-1">{followedCreators.length}</p>
-                </div>
-                <div className="bg-white/5 p-2 rounded-xl border border-white/5">
-                  <p className="text-[9px] text-text-muted font-bold uppercase tracking-wider">Likes</p>
-                  <p className="text-sm font-black text-white mt-1">{likedPosts.length}</p>
-                </div>
-              </div>
-            </div>
+            </motion.div>
           )}
         </div>
       </div>
