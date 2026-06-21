@@ -16,11 +16,17 @@ import {
   Users,
   Compass,
   Volume2,
+  UploadCloud,
+  Plus,
+  FileImage,
+  X,
+  Check,
 } from "lucide-react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import ImageLightbox from "@/components/shared/image-lightbox";
+import { createPost } from "@/app/actions/post";
 
 interface PostMedia {
   id: string;
@@ -84,6 +90,102 @@ export default function FeedClient({
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxSlides, setLightboxSlides] = useState<{ src: string; title?: string; description?: string }[]>([]);
   const [lightboxIndex, setLightboxIndex] = useState(0);
+
+  // Creator Upload Content States
+  const [uploadModalOpen, setUploadModalOpen] = useState(false);
+  const [newPostTitle, setNewPostTitle] = useState("");
+  const [newPostContent, setNewPostContent] = useState("");
+  const [newPostVisibility, setNewPostVisibility] = useState("public");
+  const [newPostPrice, setNewPostPrice] = useState(5);
+  const [newPostMediaUrl, setNewPostMediaUrl] = useState("");
+  const [newPostMediaType, setNewPostMediaType] = useState("image");
+  const [newPostFileName, setNewPostFileName] = useState("");
+  const [newPostFileSize, setNewPostFileSize] = useState(0);
+  const [isUploadingMedia, setIsUploadingMedia] = useState(false);
+  const [isPublishingPost, setIsPublishingPost] = useState(false);
+
+  const handleFileUpload = async (file: File) => {
+    setIsUploadingMedia(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/upload", { method: "POST", body: formData });
+      if (!res.ok) throw new Error("Upload failed");
+      const data = await res.json();
+      if (data.success) {
+        setNewPostMediaUrl(data.url);
+        setNewPostMediaType(data.type);
+        setNewPostFileName(data.fileName);
+        setNewPostFileSize(data.fileSize);
+        toast.success("File uploaded successfully!");
+      }
+    } catch (err) {
+      toast.error("Failed to upload file");
+    } finally {
+      setIsUploadingMedia(false);
+    }
+  };
+
+  const handleCreatePostSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newPostTitle.trim()) {
+      toast.error("Please enter a post title");
+      return;
+    }
+    setIsPublishingPost(true);
+    try {
+      const response = await createPost({
+        title: newPostTitle,
+        content: newPostContent,
+        visibility: newPostVisibility,
+        price: newPostPrice,
+        mediaUrl: newPostMediaUrl || undefined,
+        mediaType: newPostMediaUrl ? newPostMediaType : undefined,
+        fileName: newPostMediaUrl ? newPostFileName : undefined,
+        fileSize: newPostMediaUrl ? newPostFileSize : undefined,
+      });
+
+      if (response.success) {
+        toast.success("Post published successfully!");
+        
+        // Prepend post locally to update feed instantly
+        const newPostObj = {
+          id: Math.random().toString(),
+          title: newPostTitle,
+          content: newPostContent || null,
+          visibility: newPostVisibility,
+          price: newPostVisibility === "locked" ? Number(newPostPrice) : 0,
+          likesCount: 0,
+          commentsCount: 0,
+          createdAt: new Date().toISOString(),
+          creatorProfile: {
+            id: sessionUser?.creatorProfileId || "current-creator",
+            username: sessionUser?.username || "creator",
+            displayName: sessionUser?.name || "Creator",
+            isVerified: true,
+            user: { image: sessionUser?.image || null },
+          },
+          media: newPostMediaUrl ? [{ id: Math.random().toString(), type: newPostMediaType, url: newPostMediaUrl }] : [],
+        };
+        setPosts([newPostObj, ...posts]);
+
+        // Reset form states
+        setNewPostTitle("");
+        setNewPostContent("");
+        setNewPostVisibility("public");
+        setNewPostPrice(5);
+        setNewPostMediaUrl("");
+        setNewPostMediaType("image");
+        setNewPostFileName("");
+        setNewPostFileSize(0);
+        setUploadModalOpen(false);
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Failed to publish post");
+    } finally {
+      setIsPublishingPost(false);
+    }
+  };
 
   // Simulation handlers
   const handleLike = (postId: string) => {
@@ -608,6 +710,62 @@ export default function FeedClient({
               Explore All Creators
             </Link>
           </div>
+
+          {/* Creator Upload Content Widget */}
+          {sessionUser && sessionUser.role === "creator" && (
+            <div className="glass-card-premium p-5 rounded-3xl shadow-xl space-y-4 border border-white/10 mt-6">
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-primary/10 text-primary rounded-2xl shrink-0">
+                  <UploadCloud className="w-5 h-5 animate-pulse" />
+                </div>
+                <div>
+                  <h4 className="font-extrabold text-white text-sm leading-snug">Creator Upload</h4>
+                  <p className="text-[10px] text-text-muted mt-0.5">Share new content with your fans</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setUploadModalOpen(true)}
+                className="w-full py-2.5 btn-liquid text-white rounded-xl text-xs font-black flex items-center justify-center gap-1.5 cursor-pointer shadow-lg shadow-primary/15"
+              >
+                <Plus className="w-4 h-4" />
+                Create New Post
+              </button>
+            </div>
+          )}
+
+          {/* Fan Statistics Profile Widget */}
+          {sessionUser && sessionUser.role === "fan" && (
+            <div className="glass-card-premium p-5 rounded-3xl shadow-xl space-y-4 border border-white/10 mt-6">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-primary to-secondary flex items-center justify-center font-bold text-white overflow-hidden shadow border border-white/10 shrink-0">
+                  {sessionUser.image ? (
+                    <img src={sessionUser.image} alt={sessionUser.name} className="w-full h-full object-cover" />
+                  ) : (
+                    (sessionUser.name || "F").charAt(0).toUpperCase()
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h4 className="font-extrabold text-white text-sm truncate leading-snug">{sessionUser.name}</h4>
+                  <span className="text-[9px] font-black uppercase tracking-wider text-secondary bg-secondary/10 px-2 py-0.5 rounded">Premium Fan</span>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-3 gap-2 text-center pt-2 border-t border-white/5">
+                <div className="bg-white/5 p-2 rounded-xl border border-white/5">
+                  <p className="text-[9px] text-text-muted font-bold uppercase tracking-wider">Unlocked</p>
+                  <p className="text-sm font-black text-white mt-1">{unlockedPosts.length}</p>
+                </div>
+                <div className="bg-white/5 p-2 rounded-xl border border-white/5">
+                  <p className="text-[9px] text-text-muted font-bold uppercase tracking-wider">Following</p>
+                  <p className="text-sm font-black text-white mt-1">{followedCreators.length}</p>
+                </div>
+                <div className="bg-white/5 p-2 rounded-xl border border-white/5">
+                  <p className="text-[9px] text-text-muted font-bold uppercase tracking-wider">Likes</p>
+                  <p className="text-sm font-black text-white mt-1">{likedPosts.length}</p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -617,6 +775,175 @@ export default function FeedClient({
         slides={lightboxSlides}
         index={lightboxIndex}
       />
+
+      {/* Creator Upload Modal (Apple Liquid Glass Style) */}
+      <AnimatePresence>
+        {uploadModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+            <button
+              onClick={() => setUploadModalOpen(false)}
+              className="absolute top-4 right-4 p-2 bg-white/5 border border-white/10 rounded-xl text-text-muted hover:text-white transition-colors cursor-pointer z-50"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              transition={{ type: "spring", duration: 0.4 }}
+              className="w-full max-w-xl bg-[#09090b]/95 border border-white/10 rounded-3xl p-6 md:p-8 shadow-2xl flex flex-col gap-5 glass-card-premium relative"
+            >
+              <div>
+                <h3 className="font-extrabold text-white text-lg tracking-tight flex items-center gap-2">
+                  <UploadCloud className="w-5 h-5 text-primary animate-pulse" />
+                  Upload Creator Content
+                </h3>
+                <p className="text-xs text-text-muted mt-1">Publish premium posts, pictures, or media to the feed.</p>
+              </div>
+
+              <form onSubmit={handleCreatePostSubmit} className="space-y-4">
+                {/* Title */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black uppercase tracking-wider text-text-muted">Post Title</label>
+                  <input
+                    type="text"
+                    required
+                    value={newPostTitle}
+                    onChange={(e) => setNewPostTitle(e.target.value)}
+                    placeholder="E.g. Behind the scenes photos, New design pack..."
+                    className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl focus:border-primary focus:outline-none text-sm text-white focus:ring-1 focus:ring-primary"
+                  />
+                </div>
+
+                {/* Content text */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black uppercase tracking-wider text-text-muted">Content Description</label>
+                  <textarea
+                    value={newPostContent}
+                    onChange={(e) => setNewPostContent(e.target.value)}
+                    placeholder="Explain what this post is about..."
+                    className="w-full h-24 px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl focus:border-primary focus:outline-none text-sm text-white resize-none focus:ring-1 focus:ring-primary"
+                  />
+                </div>
+
+                {/* Grid: Gating and Price */}
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Visibility Dropdown */}
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black uppercase tracking-wider text-text-muted">Gating Option</label>
+                    <select
+                      value={newPostVisibility}
+                      onChange={(e) => setNewPostVisibility(e.target.value)}
+                      className="w-full px-4 py-2.5 bg-[#18181b] border border-white/10 rounded-xl focus:border-primary focus:outline-none text-xs text-white"
+                    >
+                      <option value="public">Public (Everyone)</option>
+                      <option value="followers">Followers Only</option>
+                      <option value="subscribers">Subscribers (VIP Tiers)</option>
+                      <option value="locked">Locked (Pay-to-Unlock)</option>
+                    </select>
+                  </div>
+
+                  {/* Price (Locked visibility only) */}
+                  {newPostVisibility === "locked" && (
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-black uppercase tracking-wider text-text-muted">Unlock Price ($)</label>
+                      <input
+                        type="number"
+                        min={1}
+                        required
+                        value={newPostPrice}
+                        onChange={(e) => setNewPostPrice(Number(e.target.value))}
+                        className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl focus:border-primary focus:outline-none text-sm text-white"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* File Attachment Dropzone */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black uppercase tracking-wider text-text-muted">Media Attachment</label>
+                  <div className="border border-dashed border-white/10 hover:border-primary/50 bg-white/5 rounded-2xl p-6 text-center cursor-pointer transition-all relative group flex flex-col items-center justify-center min-h-[110px]">
+                    <input
+                      type="file"
+                      accept="image/*,video/*,audio/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleFileUpload(file);
+                      }}
+                      className="absolute inset-0 opacity-0 cursor-pointer"
+                      disabled={isUploadingMedia}
+                    />
+                    
+                    {isUploadingMedia ? (
+                      <div className="flex flex-col items-center gap-2">
+                        <div className="w-6 h-6 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
+                        <span className="text-[10px] text-text-muted font-bold">Uploading to local server...</span>
+                      </div>
+                    ) : newPostMediaUrl ? (
+                      <div className="flex items-center gap-3 bg-white/5 border border-white/5 p-2 rounded-xl text-left w-full max-w-sm">
+                        <div className="p-2 bg-green-500/10 text-green-400 rounded-lg">
+                          <Check className="w-4 h-4" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-bold text-white truncate">{newPostFileName}</p>
+                          <p className="text-[9px] text-text-muted mt-0.5 capitalize">{newPostMediaType} • {(newPostFileSize / 1024 / 1024).toFixed(2)} MB</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setNewPostMediaUrl("");
+                            setNewPostMediaType("image");
+                            setNewPostFileName("");
+                            setNewPostFileSize(0);
+                          }}
+                          className="p-1 hover:bg-white/10 text-text-muted hover:text-white rounded-lg transition-colors cursor-pointer relative z-20"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <UploadCloud className="w-7 h-7 text-text-muted group-hover:text-primary transition-colors" />
+                        <p className="text-xs font-bold text-white mt-2">Click or drag files here to upload</p>
+                        <p className="text-[9px] text-text-muted mt-0.5">Supports Images, Videos, or Audio tracks</p>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {/* Submit Actions */}
+                <div className="flex gap-3 justify-end pt-3 border-t border-white/5 mt-5">
+                  <button
+                    type="button"
+                    onClick={() => setUploadModalOpen(false)}
+                    className="px-4 py-2.5 border border-white/10 hover:bg-white/5 text-xs text-white font-bold rounded-xl transition-all cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isPublishingPost || isUploadingMedia}
+                    className="px-6 py-2.5 bg-primary hover:bg-primary-hover disabled:opacity-50 text-xs text-white font-black rounded-xl transition-all cursor-pointer flex items-center gap-1.5 shadow-lg shadow-primary/10"
+                  >
+                    {isPublishingPost ? (
+                      <>
+                        <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        Publishing...
+                      </>
+                    ) : (
+                      <>
+                        Publish Post
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
