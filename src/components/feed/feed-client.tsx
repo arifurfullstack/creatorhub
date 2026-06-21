@@ -961,10 +961,10 @@ export default function FeedClient({
                   <label className="text-[10px] font-black uppercase tracking-wider text-text-muted">Gating Option</label>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     {[
-                      { id: "public", label: "Public", desc: "Everyone can view", icon: Globe, color: "text-cyan-400 border-cyan-500/10" },
-                      { id: "followers", label: "Followers", desc: "Followers only", icon: Users, color: "text-pink-400 border-pink-500/10" },
-                      { id: "subscribers", label: "VIP Tier", desc: "Paying members", icon: Star, color: "text-yellow-400 border-yellow-500/10" },
-                      { id: "locked", label: "Paywall", desc: "One-off unlock", icon: Lock, color: "text-green-400 border-green-500/10" },
+                      { id: "public", label: "Public", desc: "Everyone can view", icon: Globe, color: "text-cyan-400 border-cyan-500/10", activeClass: "!border-cyan-500/60 !bg-cyan-500/10 shadow-lg shadow-cyan-500/10" },
+                      { id: "followers", label: "Followers", desc: "Followers only", icon: Users, color: "text-pink-400 border-pink-500/10", activeClass: "!border-pink-500/60 !bg-pink-500/10 shadow-lg shadow-pink-500/10" },
+                      { id: "subscribers", label: "VIP Tier", desc: "Paying members", icon: Star, color: "text-yellow-400 border-yellow-500/10", activeClass: "!border-yellow-500/60 !bg-yellow-500/10 shadow-lg shadow-yellow-500/10" },
+                      { id: "locked", label: "Paywall", desc: "One-off unlock", icon: Lock, color: "text-green-400 border-green-500/10", activeClass: "!border-green-500/60 !bg-green-500/10 shadow-lg shadow-green-500/10" },
                     ].map((opt) => {
                       const Icon = opt.icon;
                       const isSelected = newPostVisibility === opt.id;
@@ -981,7 +981,7 @@ export default function FeedClient({
                           }}
                           className={`glass-card-premium border p-3 rounded-2xl cursor-pointer flex flex-col items-center justify-center text-center transition-all select-none gap-1.5 ${
                             isSelected
-                              ? "border-primary bg-primary/10 shadow-lg shadow-primary/5"
+                              ? opt.activeClass
                               : "border-white/5 hover:border-white/10 hover:bg-white/[0.02]"
                           }`}
                         >
