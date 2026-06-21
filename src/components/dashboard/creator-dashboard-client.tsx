@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { createPost } from "@/app/actions/post";
+import { createPost, deletePost } from "@/app/actions/post";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { toast } from "sonner";
 import { createPlan } from "@/app/actions/plan";
@@ -261,17 +261,8 @@ export default function CreatorDashboardClient({
         fileSize: mediaFileSize || undefined,
       });
 
-      if (response.success) {
-        const newPost: Post = {
-          id: Math.random().toString(),
-          title: postTitle,
-          visibility: postVisibility,
-          price: postVisibility === "locked" ? postPrice : 0,
-          likesCount: 0,
-          commentsCount: 0,
-          createdAt: new Date().toISOString(),
-        };
-        setLocalPosts([newPost, ...localPosts]);
+      if (response.success && response.post) {
+        setLocalPosts([response.post, ...localPosts]);
         setPostTitle("");
         setPostContent("");
         setPostVisibility("public");
@@ -286,6 +277,19 @@ export default function CreatorDashboardClient({
       setPostError(err?.message || "Failed to create post");
     } finally {
       setPostLoading(false);
+    }
+  };
+
+  const handleDeletePost = async (postId: string) => {
+    if (!confirm("Are you sure you want to delete this post?")) return;
+    try {
+      const res = await deletePost(postId);
+      if (res.success) {
+        setLocalPosts(localPosts.filter((p) => p.id !== postId));
+        toast.success("Post deleted successfully!");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Failed to delete post");
     }
   };
 
@@ -885,7 +889,10 @@ export default function CreatorDashboardClient({
                         </p>
                       </div>
 
-                      <button className="p-2 text-text-muted hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors shrink-0">
+                      <button
+                        onClick={() => handleDeletePost(post.id)}
+                        className="p-2 text-text-muted hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors shrink-0 cursor-pointer"
+                      >
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>

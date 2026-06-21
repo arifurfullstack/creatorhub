@@ -67,5 +67,75 @@ export async function createPost(formData: {
   revalidatePath(`/creator/${profile.username}`);
   revalidatePath("/feed");
 
+  const fullPost = {
+    id: post.id,
+    title: post.title,
+    content: post.content,
+    visibility: post.visibility,
+    price: post.price,
+    likesCount: post.likesCount,
+    commentsCount: post.commentsCount,
+    createdAt: post.createdAt.toISOString(),
+    creatorProfile: {
+      id: profile.id,
+      username: profile.username,
+      displayName: profile.displayName,
+      isVerified: profile.isVerified,
+      user: {
+        image: session.user.image || null,
+      },
+    },
+    media: formData.mediaUrl ? [{
+      id: Math.random().toString(),
+      type: formData.mediaType || "image",
+      url: formData.mediaUrl.trim(),
+    }] : [],
+  };
+
+  return { success: true, post: fullPost };
+}
+
+export async function deletePost(postId: string) {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+
+  if (!session) {
+    throw new Error("You must be logged in to delete content");
+  }
+
+  const profile = await prisma.creatorProfile.findUnique({
+    where: { userId: session.user.id },
+  });
+
+  if (!profile) {
+    throw new Error("Creator profile not found");
+  }
+
+  const post = await prisma.post.findUnique({
+    where: { id: postId },
+  });
+
+  if (!post) {
+    throw new Error("Post not found");
+  }
+
+  if (post.creatorProfileId !== profile.id) {
+    throw new Error("You are not authorized to delete this post");
+  }
+
+  await prisma.post.delete({
+    where: { id: postId },
+  });
+
+  // Decrement creator post count
+  await prisma.creatorProfile.update({
+    where: { id: profile.id },
+    data: { postCount: { decrement: 1 } },
+  });
+
+  revalidatePath(`/creator/${profile.username}`);
+  revalidatePath("/feed");
+
   return { success: true };
 }

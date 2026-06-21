@@ -153,29 +153,11 @@ export default function FeedClient({
         fileSize: newPostMediaUrl ? newPostFileSize : undefined,
       });
 
-      if (response.success) {
+      if (response.success && response.post) {
         toast.success("Post published successfully!");
         
-        // Prepend post locally to update feed instantly
-        const newPostObj = {
-          id: Math.random().toString(),
-          title: newPostTitle,
-          content: newPostContent || null,
-          visibility: newPostVisibility,
-          price: newPostVisibility === "locked" ? Number(newPostPrice) : 0,
-          likesCount: 0,
-          commentsCount: 0,
-          createdAt: new Date().toISOString(),
-          creatorProfile: {
-            id: sessionUser?.creatorProfileId || "current-creator",
-            username: sessionUser?.username || "creator",
-            displayName: sessionUser?.name || "Creator",
-            isVerified: true,
-            user: { image: sessionUser?.image || null },
-          },
-          media: newPostMediaUrl ? [{ id: Math.random().toString(), type: newPostMediaType, url: newPostMediaUrl }] : [],
-        };
-        setPosts([newPostObj, ...posts]);
+        // Prepend post locally to update feed instantly with the real database post object
+        setPosts([response.post, ...posts]);
 
         // Reset form states
         setNewPostTitle("");
