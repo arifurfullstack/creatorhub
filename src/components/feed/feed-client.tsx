@@ -588,34 +588,52 @@ export default function FeedClient({
                         )}
                       </div>
                     ) : (
-                      /* Locked overlay box */
-                      <div className="relative p-8 rounded-2xl bg-white/5 border border-white/5 text-center overflow-hidden mb-6">
-                        <div className="absolute inset-0 bg-[#18181b]/95 backdrop-blur-md flex flex-col justify-center items-center p-6">
-                          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mb-3">
-                            <Lock className="w-5 h-5 text-primary" />
-                          </div>
-                          <h4 className="font-bold text-white text-sm mb-1.5">Locked Post</h4>
-                          <p className="text-xs text-text-muted mb-4 max-w-sm leading-relaxed">
-                            {post.visibility === "locked"
-                              ? `Unlock this gated file for $${post.price} to get lifetime access.`
-                              : `Subscribe to @${post.creatorProfile.username}'s plans to unlock this premium content.`}
-                          </p>
+                      <div className="space-y-4 mb-6">
+                        {/* Teaser Title */}
+                        <h4 className="font-extrabold text-white text-base leading-snug text-left">
+                          {post.title}
+                        </h4>
 
-                          {post.visibility === "locked" ? (
-                            <button
-                              onClick={() => handleUnlock(post.id, post.price)}
-                              className="px-5 py-2 bg-primary hover:bg-primary-hover text-white rounded-full text-xs font-bold transition-all shadow-lg shadow-primary/15"
-                            >
-                              Unlock for ${post.price}
-                            </button>
-                          ) : (
-                            <Link
-                              href={`/creator/${post.creatorProfile.username}`}
-                              className="px-5 py-2 bg-primary hover:bg-primary-hover text-white rounded-full text-xs font-bold transition-all shadow-lg shadow-primary/15"
-                            >
-                              View Tiers Setup
-                            </Link>
-                          )}
+                        {/* Premium Glassmorphic Gated Card */}
+                        <div className="relative p-6 sm:p-8 rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.04] to-transparent backdrop-blur-md text-center flex flex-col justify-center items-center gap-4 min-h-[220px]">
+                          {/* Glowing Animated Lock Icon Wrapper */}
+                          <div className="relative">
+                            <div className="absolute inset-0 bg-primary/20 rounded-full blur-xl animate-pulse" />
+                            <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center relative z-10 shadow-inner">
+                              <Lock className="w-6 h-6 text-primary animate-pulse" />
+                            </div>
+                          </div>
+
+                          <div className="space-y-1 z-10">
+                            <h5 className="font-bold text-white text-xs tracking-tight uppercase tracking-wider text-primary">
+                              {post.visibility === "locked" ? "Pay-To-Unlock Gated Media" : "Exclusive Tier Locked"}
+                            </h5>
+                            <p className="text-xs text-text-muted max-w-sm leading-relaxed">
+                              {post.visibility === "locked"
+                                ? `Unlock this exclusive post permanently for $${post.price.toFixed(2)}. Platform fees apply.`
+                                : `Subscribe to @${post.creatorProfile.username}'s subscriber tiers to unlock this premium content.`}
+                            </p>
+                          </div>
+
+                          <div className="z-10 mt-1">
+                            {post.visibility === "locked" ? (
+                              <button
+                                onClick={() => handleUnlock(post.id, post.price)}
+                                className="px-6 py-2.5 bg-primary hover:bg-primary-hover text-white rounded-xl text-xs font-black transition-all shadow-lg shadow-primary/20 flex items-center gap-2 hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+                              >
+                                <Unlock className="w-3.5 h-3.5" />
+                                Unlock Content • ${post.price.toFixed(2)}
+                              </button>
+                            ) : (
+                              <Link
+                                href={`/creator/${post.creatorProfile.username}`}
+                                className="px-6 py-2.5 bg-gradient-to-r from-primary to-secondary hover:opacity-95 text-white rounded-xl text-xs font-black transition-all shadow-lg shadow-primary/15 flex items-center gap-2 hover:scale-[1.02] active:scale-[0.98]"
+                              >
+                                <Star className="w-3.5 h-3.5 fill-white text-white" />
+                                View Subscriber Tiers
+                              </Link>
+                            )}
+                          </div>
                         </div>
                       </div>
                     )}
