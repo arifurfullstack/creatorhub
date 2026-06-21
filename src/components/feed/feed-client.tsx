@@ -23,6 +23,8 @@ import {
   Check,
   Sparkles,
   Camera,
+  Globe,
+  DollarSign,
 } from "lucide-react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
@@ -954,38 +956,115 @@ export default function FeedClient({
                   />
                 </div>
 
-                {/* Grid: Gating and Price */}
-                <div className="grid grid-cols-2 gap-4">
-                  {/* Visibility Dropdown */}
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-black uppercase tracking-wider text-text-muted">Gating Option</label>
-                    <select
-                      value={newPostVisibility}
-                      onChange={(e) => setNewPostVisibility(e.target.value)}
-                      className="w-full px-4 py-2.5 bg-[#18181b] border border-white/10 rounded-xl focus:border-primary focus:outline-none text-xs text-white"
-                    >
-                      <option value="public">Public (Everyone)</option>
-                      <option value="followers">Followers Only</option>
-                      <option value="subscribers">Subscribers (VIP Tiers)</option>
-                      <option value="locked">Locked (Pay-to-Unlock)</option>
-                    </select>
+                {/* Custom Gating Option Selector */}
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-wider text-text-muted">Gating Option</label>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {[
+                      { id: "public", label: "Public", desc: "Everyone can view", icon: Globe, color: "text-cyan-400 border-cyan-500/10" },
+                      { id: "followers", label: "Followers", desc: "Followers only", icon: Users, color: "text-pink-400 border-pink-500/10" },
+                      { id: "subscribers", label: "VIP Tier", desc: "Paying members", icon: Star, color: "text-yellow-400 border-yellow-500/10" },
+                      { id: "locked", label: "Paywall", desc: "One-off unlock", icon: Lock, color: "text-green-400 border-green-500/10" },
+                    ].map((opt) => {
+                      const Icon = opt.icon;
+                      const isSelected = newPostVisibility === opt.id;
+                      return (
+                        <div
+                          key={opt.id}
+                          onClick={() => {
+                            setNewPostVisibility(opt.id);
+                            if (opt.id !== "locked") {
+                              setNewPostPrice(0);
+                            } else if (newPostPrice === 0) {
+                              setNewPostPrice(5);
+                            }
+                          }}
+                          className={`glass-card-premium border p-3 rounded-2xl cursor-pointer flex flex-col items-center justify-center text-center transition-all select-none gap-1.5 ${
+                            isSelected
+                              ? "border-primary bg-primary/10 shadow-lg shadow-primary/5"
+                              : "border-white/5 hover:border-white/10 hover:bg-white/[0.02]"
+                          }`}
+                        >
+                          <div className={`p-2 bg-white/5 rounded-xl ${opt.color}`}>
+                            <Icon className="w-4.5 h-4.5" />
+                          </div>
+                          <div>
+                            <p className="text-xs font-black text-white">{opt.label}</p>
+                            <p className="text-[9px] text-text-muted leading-tight mt-0.5">{opt.desc}</p>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
+                </div>
 
-                  {/* Price (Locked visibility only) */}
-                  {newPostVisibility === "locked" && (
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-black uppercase tracking-wider text-text-muted">Unlock Price ($)</label>
+                {/* Paid Lock Gating Panel */}
+                {newPostVisibility === "locked" && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="p-5 rounded-2xl bg-primary/5 border border-primary/20 space-y-4"
+                  >
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black uppercase tracking-wider text-primary flex items-center gap-1">
+                          <DollarSign className="w-3.5 h-3.5" />
+                          Paid Lock Content Upload System
+                        </label>
+                        <p className="text-[10px] text-text-muted max-w-sm leading-relaxed">
+                          Set the amount fans will pay to unlock this post permanently. Platform fee is 5%.
+                        </p>
+                      </div>
+
+                      <div className="relative w-full sm:w-32">
+                        <DollarSign className="absolute left-2.5 top-3 w-4 h-4 text-text-muted" />
+                        <input
+                          type="number"
+                          min={1}
+                          required
+                          value={newPostPrice || ""}
+                          onChange={(e) => setNewPostPrice(Number(e.target.value))}
+                          className="w-full pl-8 pr-3 py-2 bg-white/5 border border-white/10 rounded-xl focus:border-primary focus:outline-none text-sm text-white font-bold"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Price Slider */}
+                    <div className="space-y-2 pt-2 border-t border-white/5">
+                      <div className="flex justify-between items-center text-[10px] text-text-muted">
+                        <span>Min: $1</span>
+                        <span className="font-bold text-white">Selected: ${newPostPrice}</span>
+                        <span>Max: $100</span>
+                      </div>
                       <input
-                        type="number"
-                        min={1}
-                        required
-                        value={newPostPrice}
+                        type="range"
+                        min="1"
+                        max="100"
+                        value={newPostPrice || 5}
                         onChange={(e) => setNewPostPrice(Number(e.target.value))}
-                        className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl focus:border-primary focus:outline-none text-sm text-white"
+                        className="w-full h-1.5 bg-white/10 accent-primary rounded-lg cursor-pointer"
                       />
                     </div>
-                  )}
-                </div>
+
+                    {/* Price presets */}
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      {[3, 5, 10, 15, 20, 50].map((preset) => (
+                        <button
+                          key={preset}
+                          type="button"
+                          onClick={() => setNewPostPrice(preset)}
+                          className={`px-3 py-1 rounded-lg text-[10px] font-extrabold uppercase border transition-all cursor-pointer ${
+                            newPostPrice === preset
+                              ? "bg-primary text-white border-primary"
+                              : "bg-white/5 text-text-muted hover:text-white border-white/5"
+                          }`}
+                        >
+                          ${preset}
+                        </button>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
 
                 {/* File Attachment Dropzone */}
                 <div className="space-y-1.5">
