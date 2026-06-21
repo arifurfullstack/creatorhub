@@ -31,7 +31,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import ImageLightbox from "@/components/shared/image-lightbox";
-import { createPost } from "@/app/actions/post";
+import { createPost, createComment, getPostComments } from "@/app/actions/post";
 import { updateFanProfile } from "@/app/actions/fan";
 
 interface PostMedia {
@@ -98,6 +98,67 @@ export default function FeedClient({
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxSlides, setLightboxSlides] = useState<{ src: string; title?: string; description?: string }[]>([]);
   const [lightboxIndex, setLightboxIndex] = useState(0);
+
+  // Dynamic Comment States
+  const [activeCommentsPostId, setActiveCommentsPostId] = useState<string | null>(null);
+  const [postComments, setPostComments] = useState<Record<string, any[]>>({});
+  const [loadingCommentsPostId, setLoadingCommentsPostId] = useState<string | null>(null);
+  const [newCommentTexts, setNewCommentTexts] = useState<Record<string, string>>({});
+  const [submittingCommentPostId, setSubmittingCommentPostId] = useState<string | null>(null);
+
+  const toggleComments = async (postId: string) => {
+    if (activeCommentsPostId === postId) {
+      setActiveCommentsPostId(null);
+      return;
+    }
+    setActiveCommentsPostId(postId);
+
+    if (!postComments[postId]) {
+      setLoadingCommentsPostId(postId);
+      try {
+        const res = await getPostComments(postId);
+        if (res.success && res.comments) {
+          setPostComments((prev) => ({ ...prev, [postId]: res.comments }));
+        }
+      } catch (err) {
+        toast.error("Failed to load comments");
+      } finally {
+        setLoadingCommentsPostId(null);
+      }
+    }
+  };
+
+  const handleAddComment = async (postId: string) => {
+    const text = newCommentTexts[postId]?.trim();
+    if (!text) {
+      toast.error("Comment text cannot be empty");
+      return;
+    }
+
+    setSubmittingCommentPostId(postId);
+    try {
+      const res = await createComment(postId, text);
+      if (res.success && res.comment) {
+        setPostComments((prev) => ({
+          ...prev,
+          [postId]: [...(prev[postId] || []), res.comment],
+        }));
+        setNewCommentTexts((prev) => ({ ...prev, [postId]: "" }));
+        toast.success("Comment posted!");
+        
+        // Update commentsCount locally in posts state
+        setPosts((prevPosts) =>
+          prevPosts.map((p) =>
+            p.id === postId ? { ...p, commentsCount: p.commentsCount + 1 } : p
+          )
+        );
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Failed to post comment");
+    } finally {
+      setSubmittingCommentPostId(null);
+    }
+  };
 
   // Creator Upload Content States
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
@@ -571,8 +632,13 @@ export default function FeedClient({
                           <Heart className={`w-4.5 h-4.5 ${isLiked ? "fill-primary" : ""}`} />
                           <span>{post.likesCount}</span>
                         </button>
-                        <button className="flex items-center gap-1.5 hover:text-primary transition-colors">
-                          <MessageCircle className="w-4.5 h-4.5" />
+                        <button
+                          onClick={() => toggleComments(post.id)}
+                          className={`flex items-center gap-1.5 transition-colors cursor-pointer ${
+                            activeCommentsPostId === post.id ? "text-primary" : "hover:text-primary"
+                          }`}
+                        >
+                          <MessageCircle className={`w-4.5 h-4.5 ${activeCommentsPostId === post.id ? "fill-primary" : ""}`} />
                           <span>{post.commentsCount} Comments</span>
                         </button>
                       </div>
@@ -603,6 +669,106 @@ export default function FeedClient({
                         </button>
                       </div>
                     </div>
+
+                    {/* Dynamic Comments Section */}
+                    <AnimatePresence>
+                      {activeCommentsPostId === post.id && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: "auto" }}
+                          exit={{ opacity: 0, height: 0 }}
+                          transition={{ duration: 0.25 }}
+                          className="border-t border-white/5 mt-4 pt-4 space-y-4 overflow-hidden"
+                        >
+                          {/* Write Comment Form */}
+                          {sessionUser ? (
+                            <div className="flex items-center gap-2.5">
+                              <div className="w-7 h-7 rounded-full bg-white/5 flex items-center justify-center font-bold text-white text-[10px] overflow-hidden shrink-0 border border-white/10">
+                                {sessionUser.image ? (
+                                  <img src={sessionUser.image} alt={sessionUser.name} className="w-full h-full object-cover" />
+                                ) : (
+                                  (sessionUser.name || "U").charAt(0).toUpperCase()
+                                )}
+                              </div>
+                              <div className="relative flex-1">
+                                <input
+                                  type="text"
+                                  placeholder="Write a comment..."
+                                  value={newCommentTexts[post.id] || ""}
+                                  onChange={(e) =>
+                                    setNewCommentTexts((prev) => ({
+                                      ...prev,
+                                      [post.id]: e.target.value,
+                                    }))
+                                  }
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter") {
+                                      handleAddComment(post.id);
+                                    }
+                                  }}
+                                  className="w-full pl-3.5 pr-9 py-2 bg-white/5 border border-white/10 rounded-xl focus:border-primary focus:outline-none text-[11px] text-white"
+                                />
+                                <button
+                                  type="button"
+                                  disabled={submittingCommentPostId === post.id}
+                                  onClick={() => handleAddComment(post.id)}
+                                  className="absolute right-2.5 top-1.5 p-0.5 text-primary hover:text-primary-hover disabled:opacity-50 transition-colors cursor-pointer"
+                                >
+                                  {submittingCommentPostId === post.id ? (
+                                    <div className="w-3.5 h-3.5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                                  ) : (
+                                    <Plus className="w-4 h-4" />
+                                  )}
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <p className="text-[10px] text-text-muted">
+                              Please <Link href="/auth/login" className="text-primary hover:underline">log in</Link> to write comments.
+                            </p>
+                          )}
+
+                          {/* Comments List */}
+                          {loadingCommentsPostId === post.id ? (
+                            <div className="flex items-center justify-center py-4 gap-2">
+                              <div className="w-3.5 h-3.5 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
+                              <span className="text-[10px] text-text-muted">Loading comments...</span>
+                            </div>
+                          ) : (postComments[post.id] || []).length === 0 ? (
+                            <p className="text-center py-4 text-[10px] text-text-muted">
+                              No comments yet. Be the first to comment!
+                            </p>
+                          ) : (
+                            <div className="space-y-3 max-h-56 overflow-y-auto pr-1">
+                              {(postComments[post.id] || []).map((comment) => (
+                                <div key={comment.id} className="flex gap-2.5 text-xs items-start">
+                                  <div className="w-7 h-7 rounded-full bg-white/5 flex items-center justify-center font-bold text-white text-[10px] overflow-hidden shrink-0 border border-white/5">
+                                    {comment.user.image ? (
+                                      <img src={comment.user.image} alt={comment.user.name} className="w-full h-full object-cover" />
+                                    ) : (
+                                      (comment.user.name || "U").charAt(0).toUpperCase()
+                                    )}
+                                  </div>
+                                  <div className="flex-1 bg-white/[0.02] border border-white/5 p-2.5 rounded-2xl min-w-0">
+                                    <div className="flex justify-between items-center gap-2 mb-1">
+                                      <span className="font-extrabold text-white text-[11px] truncate">
+                                        {comment.user.name}
+                                      </span>
+                                      <span className="text-[8px] text-text-muted shrink-0">
+                                        {new Date(comment.createdAt).toLocaleDateString()}
+                                      </span>
+                                    </div>
+                                    <p className="text-white/90 text-[11px] leading-relaxed whitespace-pre-wrap break-words">
+                                      {comment.content}
+                                    </p>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </motion.div>
                 );
               })

@@ -139,3 +139,84 @@ export async function deletePost(postId: string) {
 
   return { success: true };
 }
+
+export async function getPostComments(postId: string) {
+  const comments = await prisma.comment.findMany({
+    where: { postId: postId },
+    include: {
+      user: {
+        select: {
+          name: true,
+          image: true,
+        },
+      },
+    },
+    orderBy: {
+      createdAt: "asc",
+    },
+  });
+
+  return {
+    success: true,
+    comments: comments.map((c) => ({
+      id: c.id,
+      content: c.content,
+      createdAt: c.createdAt.toISOString(),
+      user: {
+        name: c.user.name,
+        image: c.user.image,
+      },
+    })),
+  };
+}
+
+export async function createComment(postId: string, content: string) {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+
+  if (!session) {
+    throw new Error("You must be logged in to comment");
+  }
+
+  if (!content.trim()) {
+    throw new Error("Comment cannot be empty");
+  }
+
+  const comment = await prisma.comment.create({
+    data: {
+      userId: session.user.id,
+      postId: postId,
+      content: content.trim(),
+    },
+    include: {
+      user: {
+        select: {
+          name: true,
+          image: true,
+        },
+      },
+    },
+  });
+
+  // Increment comments count on the post
+  await prisma.post.update({
+    where: { id: postId },
+    data: { commentsCount: { increment: 1 } },
+  });
+
+  revalidatePath("/feed");
+
+  return {
+    success: true,
+    comment: {
+      id: comment.id,
+      content: comment.content,
+      createdAt: comment.createdAt.toISOString(),
+      user: {
+        name: comment.user.name,
+        image: comment.user.image,
+      },
+    },
+  };
+}
