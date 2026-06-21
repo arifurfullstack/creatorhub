@@ -595,9 +595,28 @@ export default function FeedClient({
                         </h4>
 
                         {/* Premium Glassmorphic Gated Card */}
-                        <div className="relative p-6 sm:p-8 rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.04] to-transparent backdrop-blur-md text-center flex flex-col justify-center items-center gap-4 min-h-[220px]">
+                        <div className="relative p-6 sm:p-8 rounded-2xl border border-white/10 bg-[#0c0d19]/80 backdrop-blur-2xl text-center flex flex-col justify-center items-center gap-4 min-h-[240px] overflow-hidden shadow-2xl">
+                          {/* Heavily Blurred Media Background Teaser */}
+                          {post.media.length > 0 && (
+                            <div className="absolute inset-0 z-0 select-none pointer-events-none scale-105 filter blur-[24px] opacity-45">
+                              {post.media[0].type === "video" || post.media[0].type === "audio" ? (
+                                <div className="w-full h-full bg-gradient-to-tr from-blue-600 to-indigo-900" />
+                              ) : (
+                                /* eslint-disable-next-line @next/next/no-img-element */
+                                <img
+                                  src={post.media[0].url}
+                                  alt="Blurred preview content"
+                                  className="w-full h-full object-cover"
+                                />
+                              )}
+                            </div>
+                          )}
+
+                          {/* Dark Blue/Violet Liquid Glass Gradient overlay */}
+                          <div className="absolute inset-0 bg-gradient-to-tr from-blue-950/60 via-black/50 to-indigo-950/40 z-[1]" />
+
                           {/* Glowing Animated Lock Icon Wrapper */}
-                          <div className="relative">
+                          <div className="relative z-10">
                             <div className="absolute inset-0 bg-primary/20 rounded-full blur-xl animate-pulse" />
                             <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center relative z-10 shadow-inner">
                               <Lock className="w-6 h-6 text-primary animate-pulse" />
