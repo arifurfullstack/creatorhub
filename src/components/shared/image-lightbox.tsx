@@ -29,6 +29,13 @@ export default function ImageLightbox({ open, close, slides, index = 0 }: ImageL
       index={index}
       slides={slides}
       plugins={[Zoom, Fullscreen, Captions]}
+      carousel={{
+        finite: slides.length <= 1,
+      }}
+      render={{
+        buttonPrev: slides.length <= 1 ? () => null : undefined,
+        buttonNext: slides.length <= 1 ? () => null : undefined,
+      }}
       zoom={{
         maxZoomPixelRatio: 5,
         doubleTapDelay: 300,
