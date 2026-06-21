@@ -191,7 +191,7 @@ export default function FeedClient({
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start relative z-10">
         {/* Main Feed Feed Column (Span 2) */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="lg:col-span-2 space-y-6 order-1 lg:order-2">
           {/* Feed Header Navigation */}
           <div className="glass-card-static p-4 rounded-2xl flex flex-col gap-4 shadow-xl">
             <div className="flex border-b border-white/5 gap-6 overflow-x-auto scrollbar-none pb-px">
@@ -519,7 +519,7 @@ export default function FeedClient({
         </div>
 
         {/* Sidebar Widget Column (Span 1, hidden on mobile/tablet) */}
-        <div className="hidden lg:flex flex-col gap-6 lg:col-span-1 sticky top-24">
+        <div className="hidden lg:flex flex-col gap-6 lg:col-span-1 sticky top-24 order-2 lg:order-1">
           {/* User Widget */}
           {sessionUser && (
             <div className="glass-card-static p-5 rounded-3xl shadow-xl space-y-4">
