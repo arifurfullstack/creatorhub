@@ -22,12 +22,15 @@ import {
   X,
   Check,
   Sparkles,
+  Camera,
 } from "lucide-react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 import ImageLightbox from "@/components/shared/image-lightbox";
 import { createPost } from "@/app/actions/post";
+import { updateFanProfile } from "@/app/actions/fan";
 
 interface PostMedia {
   id: string;
@@ -76,10 +79,12 @@ export default function FeedClient({
   sessionUser: any;
   recommendedCreators: RecommendedCreator[];
 }) {
+  const router = useRouter();
   const [posts, setPosts] = useState<Post[]>(initialPosts);
   const [activeFeed, setActiveFeed] = useState<"for-you" | "following" | "latest" | "bookmarks">("for-you");
   const [postSearch, setPostSearch] = useState("");
   const [selectedVisibility, setSelectedVisibility] = useState<string>("all");
+  const [isUploadingSidebarAvatar, setIsUploadingSidebarAvatar] = useState(false);
   const [isTabLoading, setIsTabLoading] = useState(false);
 
   const [likedPosts, setLikedPosts] = useState<string[]>([]);
@@ -781,19 +786,58 @@ export default function FeedClient({
 
               <div className="relative z-10 space-y-4">
                 <div className="flex items-center gap-3">
-                  <div className="relative shrink-0 select-none">
-                    <div className="w-12 h-12 rounded-full p-[2px] bg-gradient-to-tr from-primary to-secondary shadow-lg">
-                      <div className="w-full h-full rounded-full overflow-hidden bg-background border border-background">
+                  <div className="relative shrink-0 select-none cursor-pointer group/avatar">
+                    <div className="w-12 h-12 rounded-full p-[2px] bg-gradient-to-tr from-primary to-secondary shadow-lg relative overflow-hidden">
+                      <input 
+                        type="file"
+                        accept="image/*"
+                        disabled={isUploadingSidebarAvatar}
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          setIsUploadingSidebarAvatar(true);
+                          try {
+                            const formData = new FormData();
+                            formData.append("file", file);
+                            const res = await fetch("/api/upload", { method: "POST", body: formData });
+                            if (!res.ok) throw new Error("Upload failed");
+                            const data = await res.json();
+                            if (data.success && data.url) {
+                              const updateRes = await updateFanProfile({ name: sessionUser.name, image: data.url });
+                              if (updateRes.success) {
+                                toast.success("Avatar updated successfully!");
+                                router.refresh();
+                              } else {
+                                throw new Error("Database update failed");
+                              }
+                            }
+                          } catch (err) {
+                            toast.error("Failed to upload avatar");
+                          } finally {
+                            setIsUploadingSidebarAvatar(false);
+                          }
+                        }}
+                        className="absolute inset-0 opacity-0 cursor-pointer z-30"
+                      />
+                      <div className="w-full h-full rounded-full overflow-hidden bg-background border border-background relative">
                         {sessionUser.image ? (
-                          <img src={sessionUser.image} alt={sessionUser.name} className="w-full h-full object-cover" />
+                          <img src={sessionUser.image} alt={sessionUser.name} className={`w-full h-full object-cover group-hover/avatar:scale-105 transition-transform duration-500 ${isUploadingSidebarAvatar ? "filter blur-sm brightness-50" : ""}`} />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center font-bold text-white text-sm bg-card">
                             {(sessionUser.name || "F").charAt(0).toUpperCase()}
                           </div>
                         )}
+                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover/avatar:opacity-100 transition-opacity z-10">
+                          <Camera className="w-3.5 h-3.5 text-white" />
+                        </div>
+                        {isUploadingSidebarAvatar && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/60 z-20">
+                            <div className="w-3.5 h-3.5 border-2 border-primary/25 border-t-primary rounded-full animate-spin" />
+                          </div>
+                        )}
                       </div>
                     </div>
-                    <span className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-primary flex items-center justify-center text-[8px] text-white border-2 border-background font-black animate-float shadow">
+                    <span className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-primary flex items-center justify-center text-[8px] text-white border-2 border-background font-black animate-float shadow z-20">
                       ★
                     </span>
                   </div>

@@ -20,6 +20,7 @@ import {
 import { toast } from "sonner";
 import { updateFanProfile, cancelFanSubscription, unfollowCreator } from "@/app/actions/fan";
 import { updateCreatorProfileSettings, updatePaymentSettings } from "@/app/actions/creator-settings";
+import { useRouter } from "next/navigation";
 
 interface SerializedUser {
   id: string;
@@ -102,10 +103,13 @@ export default function SettingsClient({
 }: SettingsProps) {
   const [activeTab, setActiveTab] = useState<TabType>("profile");
   const [isSaving, setIsSaving] = useState(false);
+  const router = useRouter();
 
   // Form states
   const [name, setName] = useState(user.name);
   const [avatar, setAvatar] = useState(user.image);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [isUploadingCover, setIsUploadingCover] = useState(false);
 
   // Creator specific form states
   const [displayName, setDisplayName] = useState(creatorProfile?.displayName || "");
@@ -168,6 +172,7 @@ export default function SettingsClient({
       }
 
       toast.success("Profile updated successfully!");
+      router.refresh();
     } catch (err: any) {
       toast.error(err.message || "Something went wrong saving settings.");
     } finally {
@@ -273,25 +278,88 @@ export default function SettingsClient({
               <form onSubmit={handleSaveProfile} className="space-y-6">
                 {/* Visual Avatar Grid */}
                 <div className="flex flex-col sm:flex-row items-center gap-6 bg-foreground/[0.01] p-5 rounded-2xl border border-white/5">
-                  <div className="w-20 h-20 rounded-full overflow-hidden shrink-0 border border-white/10 bg-muted relative group">
+                  <div className="w-20 h-20 rounded-full overflow-hidden shrink-0 border border-white/10 bg-muted relative group cursor-pointer">
+                    <input 
+                      type="file"
+                      accept="image/*"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        setIsUploadingAvatar(true);
+                        try {
+                          const formData = new FormData();
+                          formData.append("file", file);
+                          const res = await fetch("/api/upload", { method: "POST", body: formData });
+                          if (!res.ok) throw new Error("Upload failed");
+                          const data = await res.json();
+                          if (data.success && data.url) {
+                            setAvatar(data.url);
+                            toast.success("Avatar uploaded successfully!");
+                          }
+                        } catch (err) {
+                          toast.error("Failed to upload avatar");
+                        } finally {
+                          setIsUploadingAvatar(false);
+                        }
+                      }}
+                      className="absolute inset-0 opacity-0 cursor-pointer z-20"
+                    />
                     <img 
                       src={avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=150"} 
                       alt="Avatar" 
-                      className="w-full h-full object-cover" 
+                      className={`w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ${isUploadingAvatar ? "filter blur-sm brightness-50" : ""}`} 
                     />
-                    <div className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10">
                       <Camera className="w-4 h-4 text-white" />
                     </div>
+                    {isUploadingAvatar && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/60 z-15">
+                        <div className="w-5 h-5 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
+                      </div>
+                    )}
                   </div>
                   <div className="flex-1 w-full space-y-2">
-                    <label className="text-xs font-black uppercase text-text-muted tracking-wider">Profile Photo URL</label>
-                    <input 
-                      type="text" 
-                      value={avatar}
-                      onChange={(e) => setAvatar(e.target.value)}
-                      placeholder="https://images.unsplash.com/..."
-                      className="w-full bg-[#09090b]/60 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white placeholder-text-muted/40 focus:outline-none focus:border-primary/50"
-                    />
+                    <label className="text-xs font-black uppercase text-text-muted tracking-wider">Profile Photo Avatar</label>
+                    <div className="flex items-center gap-3">
+                      <input 
+                        type="text" 
+                        readOnly
+                        value={avatar}
+                        placeholder="No custom photo uploaded yet"
+                        className="w-full bg-foreground/[0.02] border border-white/5 text-text-muted/60 rounded-xl px-4 py-2.5 text-xs cursor-not-allowed truncate"
+                      />
+                      <button
+                        type="button"
+                        className="px-4 py-2.5 bg-white/5 hover:bg-white/10 text-white rounded-xl text-xs font-bold transition-all cursor-pointer relative border border-white/10 whitespace-nowrap"
+                      >
+                        <input 
+                          type="file"
+                          accept="image/*"
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+                            setIsUploadingAvatar(true);
+                            try {
+                              const formData = new FormData();
+                              formData.append("file", file);
+                              const res = await fetch("/api/upload", { method: "POST", body: formData });
+                              if (!res.ok) throw new Error("Upload failed");
+                              const data = await res.json();
+                              if (data.success && data.url) {
+                                setAvatar(data.url);
+                                toast.success("Avatar uploaded successfully!");
+                              }
+                            } catch (err) {
+                              toast.error("Failed to upload avatar");
+                            } finally {
+                              setIsUploadingAvatar(false);
+                            }
+                          }}
+                          className="absolute inset-0 opacity-0 cursor-pointer z-30"
+                        />
+                        {isUploadingAvatar ? "Uploading..." : "Upload Photo"}
+                      </button>
+                    </div>
                   </div>
                 </div>
 
@@ -354,14 +422,47 @@ export default function SettingsClient({
 
                     <div className="grid sm:grid-cols-2 gap-5">
                       <div className="space-y-2">
-                        <label className="text-xs font-black uppercase text-text-muted tracking-wider">Creator Cover Banner URL</label>
-                        <input 
-                          type="text" 
-                          value={coverImage}
-                          onChange={(e) => setCoverImage(e.target.value)}
-                          placeholder="https://images.unsplash.com/..."
-                          className="w-full bg-[#09090b]/60 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-primary/50"
-                        />
+                        <label className="text-xs font-black uppercase text-text-muted tracking-wider">Creator Cover Banner Image</label>
+                        <div className="flex items-center gap-3">
+                          <input 
+                            type="text" 
+                            readOnly
+                            value={coverImage}
+                            placeholder="No cover banner uploaded yet"
+                            className="w-full bg-foreground/[0.02] border border-white/5 text-text-muted/60 rounded-xl px-4 py-2.5 text-xs cursor-not-allowed truncate"
+                          />
+                          <button
+                            type="button"
+                            className="px-4 py-2.5 bg-white/5 hover:bg-white/10 text-white rounded-xl text-xs font-bold transition-all cursor-pointer relative border border-white/10 whitespace-nowrap"
+                          >
+                            <input 
+                              type="file"
+                              accept="image/*"
+                              onChange={async (e) => {
+                                const file = e.target.files?.[0];
+                                if (!file) return;
+                                setIsUploadingCover(true);
+                                try {
+                                  const formData = new FormData();
+                                  formData.append("file", file);
+                                  const res = await fetch("/api/upload", { method: "POST", body: formData });
+                                  if (!res.ok) throw new Error("Upload failed");
+                                  const data = await res.json();
+                                  if (data.success && data.url) {
+                                    setCoverImage(data.url);
+                                    toast.success("Cover image uploaded successfully!");
+                                  }
+                                } catch (err) {
+                                  toast.error("Failed to upload cover image");
+                                } finally {
+                                  setIsUploadingCover(false);
+                                }
+                              }}
+                              className="absolute inset-0 opacity-0 cursor-pointer z-30"
+                            />
+                            {isUploadingCover ? "Uploading..." : "Upload Cover"}
+                          </button>
+                        </div>
                       </div>
                       <div className="space-y-2">
                         <label className="text-xs font-black uppercase text-text-muted tracking-wider">Base Location</label>

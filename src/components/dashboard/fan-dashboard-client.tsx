@@ -25,8 +25,11 @@ import {
   ArrowUpRight,
   User as UserIcon,
   Globe,
+  Camera,
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 interface SubscriptionItem {
   id: string;
@@ -106,6 +109,7 @@ export default function FanDashboardClient({
   bookmarks: BookmarkItem[];
   purchases: PurchaseItem[];
 }) {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<
     "overview" | "memberships" | "follows" | "bookmarks" | "purchases" | "settings"
   >("overview");
@@ -119,6 +123,7 @@ export default function FanDashboardClient({
   // Settings states
   const [displayName, setDisplayName] = useState(user.name);
   const [avatarUrl, setAvatarUrl] = useState(user.image);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [settingsLoading, setSettingsLoading] = useState(false);
   const [settingsError, setSettingsError] = useState("");
 
@@ -163,10 +168,10 @@ export default function FanDashboardClient({
             sub.id === subId ? { ...sub, status: "canceled", cancelAtPeriodEnd: true } : sub
           )
         );
-        alert(`Successfully canceled subscription to ${creatorName}`);
+        toast.success(`Successfully canceled subscription to ${creatorName}`);
       }
     } catch (err: any) {
-      alert(err.message || "Failed to cancel subscription");
+      toast.error(err.message || "Failed to cancel subscription");
     }
   };
 
@@ -179,10 +184,10 @@ export default function FanDashboardClient({
       const res = await unfollowCreator(creatorId);
       if (res.success) {
         setFollows(follows.filter((f) => f.creatorProfile.id !== creatorId));
-        alert(`You are no longer following ${creatorName}`);
+        toast.success(`You are no longer following ${creatorName}`);
       }
     } catch (err: any) {
-      alert(err.message || "Failed to unfollow creator");
+      toast.error(err.message || "Failed to unfollow creator");
     }
   };
 
@@ -191,10 +196,10 @@ export default function FanDashboardClient({
       const res = await removeBookmark(postId);
       if (res.success) {
         setBookmarks(bookmarks.filter((b) => b.post.id !== postId));
-        alert(`Removed "${postTitle}" from bookmarks`);
+        toast.success(`Removed "${postTitle}" from bookmarks`);
       }
     } catch (err: any) {
-      alert(err.message || "Failed to remove bookmark");
+      toast.error(err.message || "Failed to remove bookmark");
     }
   };
 
@@ -210,10 +215,12 @@ export default function FanDashboardClient({
       });
 
       if (res.success) {
-        alert("Fan profile updated successfully!");
+        toast.success("Fan profile updated successfully!");
+        router.refresh();
       }
     } catch (err: any) {
       setSettingsError(err.message || "Failed to update profile settings");
+      toast.error(err.message || "Failed to update profile settings");
     } finally {
       setSettingsLoading(false);
     }
@@ -758,19 +765,90 @@ export default function FanDashboardClient({
                   />
                 </div>
 
-                <div>
-                  <label className="block text-[10px] font-bold text-text-muted uppercase tracking-wider mb-1.5">
-                    Avatar Link / URL
-                  </label>
-                  <div className="relative">
-                    <UserIcon className="absolute left-2.5 top-3.5 w-4.5 h-4.5 text-text-muted" />
-                    <input
-                      type="text"
-                      value={avatarUrl}
-                      onChange={(e) => setAvatarUrl(e.target.value)}
-                      placeholder="https://images.unsplash.com/photo-..."
-                      className="w-full pl-9 pr-3 py-2.5 bg-white/5 border border-white/10 rounded-xl focus:border-primary focus:outline-none text-xs text-white"
+                {/* Visual Avatar Grid */}
+                <div className="flex flex-col sm:flex-row items-center gap-6 bg-white/[0.01] p-5 rounded-2xl border border-white/5 mb-4">
+                  <div className="w-20 h-20 rounded-full overflow-hidden shrink-0 border border-white/10 bg-[#18181b] relative group cursor-pointer">
+                    <input 
+                      type="file"
+                      accept="image/*"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        setIsUploadingAvatar(true);
+                        try {
+                          const formData = new FormData();
+                          formData.append("file", file);
+                          const res = await fetch("/api/upload", { method: "POST", body: formData });
+                          if (!res.ok) throw new Error("Upload failed");
+                          const data = await res.json();
+                          if (data.success && data.url) {
+                            setAvatarUrl(data.url);
+                            toast.success("Avatar uploaded successfully!");
+                          }
+                        } catch (err) {
+                          toast.error("Failed to upload avatar");
+                        } finally {
+                          setIsUploadingAvatar(false);
+                        }
+                      }}
+                      className="absolute inset-0 opacity-0 cursor-pointer z-20"
                     />
+                    <img 
+                      src={avatarUrl || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=150"} 
+                      alt="Avatar" 
+                      className={`w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ${isUploadingAvatar ? "filter blur-sm brightness-50" : ""}`} 
+                    />
+                    <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                      <Camera className="w-4 h-4 text-white" />
+                    </div>
+                    {isUploadingAvatar && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/60 z-15">
+                        <div className="w-5 h-5 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1 w-full space-y-2">
+                    <label className="text-xs font-black uppercase text-text-muted tracking-wider">Profile Photo Avatar</label>
+                    <div className="flex items-center gap-3">
+                      <input 
+                        type="text" 
+                        readOnly
+                        value={avatarUrl}
+                        placeholder="No custom photo uploaded yet"
+                        className="w-full bg-white/[0.02] border border-white/5 text-text-muted/60 rounded-xl px-4 py-2.5 text-xs cursor-not-allowed truncate"
+                      />
+                      <button
+                        type="button"
+                        className="px-4 py-2.5 bg-white/5 hover:bg-white/10 text-white rounded-xl text-xs font-bold transition-all cursor-pointer relative border border-white/10 whitespace-nowrap"
+                      >
+                        <input 
+                          type="file"
+                          accept="image/*"
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+                            setIsUploadingAvatar(true);
+                            try {
+                              const formData = new FormData();
+                              formData.append("file", file);
+                              const res = await fetch("/api/upload", { method: "POST", body: formData });
+                              if (!res.ok) throw new Error("Upload failed");
+                              const data = await res.json();
+                              if (data.success && data.url) {
+                                setAvatarUrl(data.url);
+                                toast.success("Avatar uploaded successfully!");
+                              }
+                            } catch (err) {
+                              toast.error("Failed to upload avatar");
+                            } finally {
+                              setIsUploadingAvatar(false);
+                            }
+                          }}
+                          className="absolute inset-0 opacity-0 cursor-pointer z-30"
+                        />
+                        {isUploadingAvatar ? "Uploading..." : "Upload Photo"}
+                      </button>
+                    </div>
                   </div>
                 </div>
 
