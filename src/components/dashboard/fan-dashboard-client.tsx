@@ -45,6 +45,7 @@ interface SubscriptionItem {
       id: string;
       username: string;
       displayName: string;
+      avatar: string;
     };
   };
 }
@@ -60,6 +61,7 @@ interface FollowItem {
     location: string;
     coverImage: string;
     followerCount: number;
+    avatar: string;
   };
 }
 
@@ -75,6 +77,7 @@ interface BookmarkItem {
       id: string;
       username: string;
       displayName: string;
+      avatar: string;
     };
   };
 }
@@ -227,7 +230,7 @@ export default function FanDashboardClient({
   };
 
   return (
-    <div className="min-h-[75vh] bg-transparent flex flex-col md:flex-row gap-8 relative overflow-hidden pt-24 md:pt-28">
+    <div className="min-h-[75vh] bg-transparent relative overflow-hidden pt-24 md:pt-28 space-y-8">
       {/* Background Liquid Mesh Evolved */}
       <div className="liquid-mesh-container">
         <div className="liquid-mesh-blob liquid-mesh-blob-1" />
@@ -235,57 +238,181 @@ export default function FanDashboardClient({
         <div className="liquid-mesh-blob liquid-mesh-blob-3" />
       </div>
 
-      {/* Sidebar Controls */}
-      <aside className="w-full md:w-64 glass-card-static p-6 shrink-0 rounded-2xl relative z-10">
-        <div className="mb-8 border-b border-white/5 pb-5">
-          <p className="text-[10px] text-text-muted font-bold uppercase tracking-wider">
-            Fan Account
-          </p>
-          <h2 className="text-lg font-extrabold text-white mt-1 truncate">{displayName}</h2>
-          <p className="text-xs text-primary font-medium mt-0.5">{user.email}</p>
+      {/* 1. VIP Supporter Profile Card */}
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="glass-card-premium rounded-3xl overflow-hidden shadow-2xl relative z-10 border border-white/10"
+      >
+        {/* Cover image area */}
+        <div className="h-32 sm:h-44 w-full relative bg-gradient-to-r from-primary/20 via-purple-600/10 to-secondary/20 overflow-hidden select-none">
+          <div className="absolute inset-0 bg-grid-white/[0.02]" />
+          <div className="absolute -top-24 -left-24 w-72 h-72 bg-primary/20 rounded-full blur-3xl animate-pulse" />
+          <div className="absolute -bottom-24 -right-24 w-72 h-72 bg-secondary/15 rounded-full blur-3xl" />
         </div>
 
-        <nav className="space-y-1.5">
-          {[
-            { id: "overview", label: "Overview & Stats", icon: Sparkles },
-            { id: "memberships", label: "My Memberships", icon: CreditCard },
-            { id: "follows", label: "Followed Creators", icon: Users },
-            { id: "bookmarks", label: "Saved Bookmarks", icon: Bookmark },
-            { id: "purchases", label: "Purchase History", icon: DollarSign },
-            { id: "settings", label: "Account Settings", icon: Settings },
-          ].map((item) => {
-            const Icon = item.icon;
-            const isSelected = activeTab === item.id;
-            return (
-              <button
-                key={item.id}
-                onClick={() => setActiveTab(item.id as any)}
-                className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all relative ${
-                  isSelected
-                    ? "text-white"
-                    : "text-text-muted hover:text-white hover:bg-white/5"
-                }`}
-              >
-                {isSelected && (
-                  <>
-                    <motion.div
-                      layoutId="activeFanDashTab"
-                      className="absolute inset-0 bg-white/10 border border-white/10 rounded-xl -z-10 shadow-lg"
-                      transition={{ type: "spring", stiffness: 380, damping: 30 }}
-                    />
-                    <span className="absolute left-0 top-3 bottom-3 w-1 bg-primary rounded-r-md" />
-                  </>
-                )}
-                <Icon className="w-4.5 h-4.5 relative z-10" />
-                <span className="relative z-10">{item.label}</span>
-              </button>
-            );
-          })}
-        </nav>
-      </aside>
+        {/* Content Area */}
+        <div className="p-6 md:p-8 flex flex-col md:flex-row justify-between items-start md:items-end gap-6 -mt-12 sm:-mt-16 relative z-20">
+          <div className="flex flex-col sm:flex-row items-center sm:items-end gap-5 text-center sm:text-left w-full md:w-auto">
+            {/* Interactive Overlapping Avatar */}
+            <div className="relative group/card-avatar cursor-pointer">
+              <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full p-[3px] bg-gradient-to-tr from-primary via-purple-500 to-secondary shadow-xl shadow-primary/10">
+                <input 
+                  type="file"
+                  accept="image/*"
+                  disabled={isUploadingAvatar}
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    setIsUploadingAvatar(true);
+                    try {
+                      const formData = new FormData();
+                      formData.append("file", file);
+                      const res = await fetch("/api/upload", { method: "POST", body: formData });
+                      if (!res.ok) throw new Error("Upload failed");
+                      const data = await res.json();
+                      if (data.success && data.url) {
+                        const updateRes = await updateFanProfile({ name: displayName, image: data.url });
+                        if (updateRes.success) {
+                          setAvatarUrl(data.url);
+                          toast.success("Avatar updated successfully!");
+                          router.refresh();
+                        } else {
+                          throw new Error("Database update failed");
+                        }
+                      }
+                    } catch (err) {
+                      toast.error("Failed to upload avatar");
+                    } finally {
+                      setIsUploadingAvatar(false);
+                    }
+                  }}
+                  className="absolute inset-0 opacity-0 cursor-pointer z-30"
+                />
+                <div className="w-full h-full rounded-full overflow-hidden bg-background border border-background relative">
+                  <img 
+                    src={avatarUrl || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=150"} 
+                    alt={displayName} 
+                    className={`w-full h-full object-cover group-hover/card-avatar:scale-105 transition-transform duration-500 ${isUploadingAvatar ? "filter blur-sm brightness-50" : ""}`} 
+                  />
+                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover/card-avatar:opacity-100 transition-opacity z-10">
+                    <Camera className="w-5 h-5 text-white" />
+                  </div>
+                  {isUploadingAvatar && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/60 z-20">
+                      <div className="w-5 h-5 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
+                    </div>
+                  )}
+                </div>
+              </div>
+              <span className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-primary flex items-center justify-center text-xs text-white border-2 border-background font-black animate-float shadow-lg z-20">
+                ★
+              </span>
+            </div>
 
-      {/* Content Panels */}
-      <main className="flex-1 space-y-6">
+            {/* Supporter details */}
+            <div className="space-y-2 mt-4 sm:mt-0">
+              <div className="flex flex-col sm:flex-row items-center gap-2.5">
+                <h2 className="text-xl sm:text-2xl font-black text-white leading-none tracking-tight">{displayName}</h2>
+                <div className="flex gap-1.5 shrink-0">
+                  <span className="px-2.5 py-0.5 rounded-full bg-primary/10 border border-primary/20 text-[9px] font-black uppercase text-primary tracking-wider flex items-center gap-1">
+                    <Sparkles className="w-2.5 h-2.5 text-primary" />
+                    VIP Supporter
+                  </span>
+                  <span className="px-2.5 py-0.5 rounded-full bg-secondary/10 border border-secondary/20 text-[9px] font-black uppercase text-secondary tracking-wider">
+                    Loyalty Level 3
+                  </span>
+                </div>
+              </div>
+              <p className="text-xs text-text-muted">{user.email} &bull; Supporter account since June 2026</p>
+            </div>
+          </div>
+
+          {/* Stats strip on the right */}
+          <div className="flex flex-wrap items-center gap-3 w-full md:w-auto md:self-end">
+            {[
+              { label: "Memberships", value: subscriptions.filter(s => s.status === "active").length, icon: CreditCard },
+              { label: "Followed", value: follows.length, icon: Users },
+              { label: "Bookmarks", value: bookmarks.length, icon: Bookmark },
+              { label: "Spent Support", value: `$${totalSpent.toFixed(2)}`, icon: DollarSign, isPrimary: true },
+            ].map((stat, idx) => {
+              const Icon = stat.icon;
+              return (
+                <div
+                  key={idx}
+                  className={`flex items-center gap-3 px-4 py-2.5 rounded-2xl border transition-all ${
+                    stat.isPrimary
+                      ? "bg-primary/10 border-primary/20 shadow-lg shadow-primary/5"
+                      : "bg-white/[0.02] border-white/5 hover:border-white/10"
+                  }`}
+                >
+                  <div className={`p-1.5 rounded-xl ${stat.isPrimary ? "bg-primary/10 text-primary" : "bg-white/5 text-text-muted"}`}>
+                    <Icon className="w-3.5 h-3.5" />
+                  </div>
+                  <div>
+                    <p className="text-[8px] text-text-muted font-bold uppercase tracking-wider leading-none">{stat.label}</p>
+                    <p className="text-sm font-black text-white mt-1 leading-none">{stat.value}</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </motion.div>
+
+      {/* 2. Main content container */}
+      <div className="flex flex-col md:flex-row gap-8 relative z-10">
+        {/* Sidebar Controls */}
+        <aside className="w-full md:w-64 glass-card-static p-6 shrink-0 rounded-2xl relative z-10">
+          <div className="mb-8 border-b border-white/5 pb-5">
+            <p className="text-[10px] text-text-muted font-bold uppercase tracking-wider">
+              Navigation Menu
+            </p>
+            <h2 className="text-sm font-extrabold text-white mt-1">Dashboard Panel</h2>
+            <p className="text-[10px] text-primary font-medium mt-0.5">Select a category below</p>
+          </div>
+
+          <nav className="space-y-1.5">
+            {[
+              { id: "overview", label: "Overview & Stats", icon: Sparkles },
+              { id: "memberships", label: "My Memberships", icon: CreditCard },
+              { id: "follows", label: "Followed Creators", icon: Users },
+              { id: "bookmarks", label: "Saved Bookmarks", icon: Bookmark },
+              { id: "purchases", label: "Purchase History", icon: DollarSign },
+              { id: "settings", label: "Account Settings", icon: Settings },
+            ].map((item) => {
+              const Icon = item.icon;
+              const isSelected = activeTab === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => setActiveTab(item.id as any)}
+                  className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all relative ${
+                    isSelected
+                      ? "text-white"
+                      : "text-text-muted hover:text-white hover:bg-white/5"
+                  }`}
+                >
+                  {isSelected && (
+                    <>
+                      <motion.div
+                        layoutId="activeFanDashTab"
+                        className="absolute inset-0 bg-white/10 border border-white/10 rounded-xl -z-10 shadow-lg"
+                        transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                      />
+                      <span className="absolute left-0 top-3 bottom-3 w-1 bg-primary rounded-r-md" />
+                    </>
+                  )}
+                  <Icon className="w-4.5 h-4.5 relative z-10" />
+                  <span className="relative z-10">{item.label}</span>
+                </button>
+              );
+            })}
+          </nav>
+        </aside>
+
+        {/* Content Panels */}
+        <main className="flex-1 space-y-6">
         {/* TAB: OVERVIEW */}
         {activeTab === "overview" && (
           <div className="space-y-8 animate-fadeIn">
@@ -425,77 +552,93 @@ export default function FanDashboardClient({
             </div>
 
             {/* Memberships Table */}
-            <div className="glass-card-premium rounded-2xl overflow-hidden shadow-2xl">
-              <table className="w-full border-collapse text-left text-xs">
-                <thead className="bg-white/5 text-text-muted uppercase font-bold tracking-wider border-b border-white/5">
-                  <tr>
-                    <th className="p-4">Creator</th>
-                    <th className="p-4">Membership Level</th>
-                    <th className="p-4">Price</th>
-                    <th className="p-4">Renewal / End Date</th>
-                    <th className="p-4">Status</th>
-                    <th className="p-4 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-white/5 text-white/95">
-                  {filteredSubs.length === 0 ? (
-                    <tr>
-                      <td colSpan={6} className="p-8 text-center text-text-muted">
-                        No subscriptions found.
-                      </td>
-                    </tr>
-                  ) : (
-                    filteredSubs.map((sub) => (
-                      <tr key={sub.id} className="hover:bg-white/5 transition-colors">
-                        <td className="p-4 font-bold">
+            {/* Memberships Cards Grid */}
+            {filteredSubs.length === 0 ? (
+              <div className="text-center py-12 glassmorphism rounded-2xl border border-white/5">
+                <CreditCard className="w-12 h-12 text-text-muted mx-auto mb-4" />
+                <h3 className="font-bold text-white text-base mb-1">No Active Memberships</h3>
+                <p className="text-xs text-text-muted">Explore home or search pages to join creator tiers.</p>
+              </div>
+            ) : (
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filteredSubs.map((sub) => (
+                  <div
+                    key={sub.id}
+                    className="glass-card-premium rounded-2xl p-5 flex flex-col justify-between border border-white/5 hover:border-white/10 transition-all relative overflow-hidden group"
+                  >
+                    <div>
+                      {/* Top bar: Status + Tier Price */}
+                      <div className="flex justify-between items-center gap-4 mb-4">
+                        <span
+                          className={`px-2.5 py-0.5 rounded-lg text-[9px] font-black uppercase border ${
+                            sub.status === "active"
+                              ? "bg-green-500/10 text-green-400 border-green-500/20"
+                              : "bg-red-500/10 text-red-400 border-red-500/20"
+                          }`}
+                        >
+                          {sub.status}
+                        </span>
+                        <span className="text-xs font-black text-primary bg-primary/10 border border-primary/20 px-2.5 py-0.5 rounded-lg">
+                          ${sub.plan.price.toFixed(2)}/mo
+                        </span>
+                      </div>
+
+                      {/* Creator Info */}
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="w-10 h-10 rounded-full overflow-hidden shrink-0 border border-white/10 bg-white/5">
+                          <img
+                            src={sub.plan.creatorProfile.avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=100"}
+                            alt={sub.plan.creatorProfile.displayName}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <div className="min-w-0">
                           <Link
                             href={`/creator/${sub.plan.creatorProfile.username}`}
-                            className="hover:text-primary transition-colors"
+                            className="font-extrabold text-white text-sm hover:underline hover:text-primary transition-colors truncate block leading-none mb-1"
                           >
                             {sub.plan.creatorProfile.displayName}
                           </Link>
-                          <span className="block text-[10px] text-text-muted font-normal mt-0.5">
+                          <span className="block text-[10px] text-text-muted leading-none">
                             @{sub.plan.creatorProfile.username}
                           </span>
-                        </td>
-                        <td className="p-4 font-semibold text-primary">{sub.plan.name}</td>
-                        <td className="p-4">${sub.plan.price.toFixed(2)}/mo</td>
-                        <td className="p-4 text-text-muted">
-                          {new Date(sub.currentPeriodEnd).toLocaleDateString()}
-                        </td>
-                        <td className="p-4">
-                          <span
-                            className={`px-2.5 py-0.5 rounded text-[9px] font-extrabold uppercase border ${
-                              sub.status === "active"
-                                ? "bg-green-500/10 text-green-400 border-green-500/20"
-                                : "bg-red-500/10 text-red-400 border-red-500/20"
-                            }`}
-                          >
-                            {sub.status}
-                          </span>
-                        </td>
-                        <td className="p-4 text-right">
-                          {sub.status === "active" ? (
-                            <button
-                              onClick={() =>
-                                handleCancelSubscription(sub.id, sub.plan.creatorProfile.displayName)
-                              }
-                              className="px-3 py-1.5 bg-red-500/10 hover:bg-red-500 hover:text-white text-red-400 rounded-lg text-[10px] font-bold transition-all border border-red-500/20"
-                            >
-                              Cancel Plan
-                            </button>
-                          ) : (
-                            <span className="text-[10px] text-text-muted font-medium">
-                              Access ends soon
-                            </span>
-                          )}
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
+                        </div>
+                      </div>
+
+                      {/* Tier Name */}
+                      <div className="bg-white/[0.01] border border-white/5 p-3 rounded-xl mb-4">
+                        <p className="text-[9px] text-text-muted font-bold uppercase tracking-wider">Active Level</p>
+                        <p className="text-xs font-bold text-white mt-1">{sub.plan.name} Tier</p>
+                      </div>
+
+                      {/* Renewal/End Date */}
+                      <div className="flex items-center gap-1.5 text-xs text-text-muted">
+                        <Calendar className="w-3.5 h-3.5 text-text-muted shrink-0" />
+                        <span>Renewal: {new Date(sub.currentPeriodEnd).toLocaleDateString()}</span>
+                      </div>
+                    </div>
+
+                    {/* Action button */}
+                    <div className="mt-6 pt-4 border-t border-white/5 flex justify-end">
+                      {sub.status === "active" && !sub.cancelAtPeriodEnd ? (
+                        <button
+                          onClick={() =>
+                            handleCancelSubscription(sub.id, sub.plan.creatorProfile.displayName)
+                          }
+                          className="w-full py-2 bg-red-500/10 hover:bg-red-500 hover:text-white text-red-400 rounded-xl text-xs font-bold transition-all border border-red-500/20 cursor-pointer"
+                        >
+                          Cancel Subscription
+                        </button>
+                      ) : (
+                        <span className="text-[10px] text-text-muted font-bold">
+                          Access ending soon
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
@@ -552,7 +695,7 @@ export default function FanDashboardClient({
                           <div className="w-12 h-12 rounded-full border-2 border-card bg-card overflow-hidden shadow-lg">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img
-                              src={`https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=150`}
+                              src={f.creatorProfile.avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=150"}
                               alt={f.creatorProfile.displayName}
                               className="w-full h-full object-cover"
                             />
@@ -646,9 +789,18 @@ export default function FanDashboardClient({
                       <h4 className="font-bold text-white text-sm truncate mt-3 leading-snug">
                         {b.post.title}
                       </h4>
-                      <p className="text-xs text-text-muted mt-1 truncate">
-                        By {b.post.creatorProfile.displayName} (@{b.post.creatorProfile.username})
-                      </p>
+                      <div className="flex items-center gap-2 mt-2">
+                        <div className="w-5 h-5 rounded-full overflow-hidden border border-white/10 shrink-0">
+                          <img
+                            src={b.post.creatorProfile.avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=50"}
+                            alt={b.post.creatorProfile.displayName}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <p className="text-xs text-text-muted truncate">
+                          By {b.post.creatorProfile.displayName} (@{b.post.creatorProfile.username})
+                        </p>
+                      </div>
                     </div>
 
                     <div className="flex justify-between items-center mt-4 pt-3 border-t border-white/5">
@@ -865,6 +1017,7 @@ export default function FanDashboardClient({
           </div>
         )}
       </main>
+      </div>
     </div>
   );
 }

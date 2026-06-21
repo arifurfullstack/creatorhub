@@ -24,6 +24,11 @@ export default async function FanDashboardPage() {
               id: true,
               username: true,
               displayName: true,
+              user: {
+                select: {
+                  image: true,
+                },
+              },
             },
           },
         },
@@ -47,6 +52,11 @@ export default async function FanDashboardPage() {
           location: true,
           followerCount: true,
           coverImage: true,
+          user: {
+            select: {
+              image: true,
+            },
+          },
         },
       },
     },
@@ -66,6 +76,11 @@ export default async function FanDashboardPage() {
               id: true,
               username: true,
               displayName: true,
+              user: {
+                select: {
+                  image: true,
+                },
+              },
             },
           },
         },
@@ -134,7 +149,12 @@ export default async function FanDashboardPage() {
       id: sub.plan.id,
       name: sub.plan.name,
       price: sub.plan.price,
-      creatorProfile: sub.plan.creatorProfile,
+      creatorProfile: {
+        id: sub.plan.creatorProfile.id,
+        username: sub.plan.creatorProfile.username,
+        displayName: sub.plan.creatorProfile.displayName,
+        avatar: sub.plan.creatorProfile.user?.image || "",
+      },
     },
   }));
 
@@ -149,6 +169,7 @@ export default async function FanDashboardPage() {
       location: f.creatorProfile.location || "",
       coverImage: f.creatorProfile.coverImage || "",
       followerCount: f.creatorProfile.followerCount,
+      avatar: f.creatorProfile.user?.image || "",
     },
   }));
 
@@ -160,7 +181,12 @@ export default async function FanDashboardPage() {
       title: b.post.title,
       visibility: b.post.visibility,
       price: b.post.price,
-      creatorProfile: b.post.creatorProfile,
+      creatorProfile: {
+        id: b.post.creatorProfile.id,
+        username: b.post.creatorProfile.username,
+        displayName: b.post.creatorProfile.displayName,
+        avatar: b.post.creatorProfile.user?.image || "",
+      },
     },
   }));
 
