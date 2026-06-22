@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { sendMessage, getMessages, unlockMessage } from "@/app/actions/message";
+import { sendMessage, getMessages, unlockMessage, markMessagesAsRead } from "@/app/actions/message";
 import { ArrowLeft, Send, Lock, Unlock, Image as ImageIcon, Sparkles, Star } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
@@ -145,11 +145,16 @@ export default function MessagesClient({
 
   // Setup Socket client connection and listeners
   useEffect(() => {
+    if (socketRef.current) return;
+
     // Dynamically trigger the socket server initialization
     fetch("/api/socket").finally(() => {
+      if (socketRef.current) return;
+
       const socket = io({
         path: "/api/socket",
         addTrailingSlash: false,
+        transports: ["websocket"],
       });
 
       socketRef.current = socket;
@@ -173,6 +178,9 @@ export default function MessagesClient({
             if (prev.some((m) => m.id === message.id)) return prev;
             return [...prev, message];
           });
+
+          // Mark it as read in the database immediately so notification badges clear
+          markMessagesAsRead(message.senderId).catch(console.error);
         }
 
         // Update target conversation snippet and bump to top
@@ -212,6 +220,7 @@ export default function MessagesClient({
     return () => {
       if (socketRef.current) {
         socketRef.current.disconnect();
+        socketRef.current = null;
       }
     };
   }, [currentUserId]);

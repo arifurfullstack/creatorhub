@@ -199,3 +199,24 @@ export async function getUnreadMessagesCount() {
 
   return count;
 }
+
+export async function markMessagesAsRead(senderId: string) {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+
+  if (!session) {
+    return { success: false };
+  }
+
+  await prisma.message.updateMany({
+    where: {
+      senderId: senderId,
+      receiverId: session.user.id,
+      isRead: false,
+    },
+    data: { isRead: true },
+  });
+
+  return { success: true };
+}
