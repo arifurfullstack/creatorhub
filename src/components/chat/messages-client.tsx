@@ -91,6 +91,9 @@ export default function MessagesClient({
   const [isLockedMessage, setIsLockedMessage] = useState(false);
   const [lockAmount, setLockAmount] = useState(5);
   const [attachUrl, setAttachUrl] = useState("");
+  const [attachType, setAttachType] = useState("");
+  const [attachName, setAttachName] = useState("");
+  const [uploading, setUploading] = useState(false);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [sending, setSending] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
@@ -103,12 +106,55 @@ export default function MessagesClient({
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const socketRef = useRef<any>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const activeConversationRef = useRef<string | null>(activeConversation);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     activeConversationRef.current = activeConversation;
   }, [activeConversation]);
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate size: 10MB images, 50MB audio/video
+    const maxLimit = file.type.startsWith("image/") ? 10 * 1024 * 1024 : 50 * 1024 * 1024;
+    if (file.size > maxLimit) {
+      toast.error(`File size too large. Maximum size allowed is ${maxLimit / (1024 * 1024)}MB.`);
+      return;
+    }
+
+    setUploading(true);
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Upload failed");
+      }
+
+      const data = await res.json();
+      if (data.success) {
+        setAttachUrl(data.url);
+        setAttachType(data.type);
+        setAttachName(data.fileName);
+        toast.success("File uploaded successfully!");
+      }
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || "Failed to upload file");
+    } finally {
+      setUploading(false);
+      if (e.target) e.target.value = "";
+    }
+  };
 
   // Load chat history when active conversation changes
   useEffect(() => {
@@ -267,7 +313,7 @@ export default function MessagesClient({
     });
 
     try {
-      const type = isLockedMessage ? "paid" : attachUrl.trim() ? "image" : "text";
+      const type = isLockedMessage ? "paid" : attachUrl.trim() ? (attachType || "image") : "text";
       const response = await sendMessage({
         receiverId: activeConversation,
         content: inputText,
@@ -285,7 +331,7 @@ export default function MessagesClient({
             c.id === activeConversation
               ? {
                   ...c,
-                  lastMessage: inputText || `[Premium File]`,
+                  lastMessage: inputText || (attachType ? `[${attachType} file]` : `[Premium File]`),
                   lastMessageAt: new Date().toISOString(),
                 }
               : c
@@ -300,6 +346,8 @@ export default function MessagesClient({
         setIsLockedMessage(false);
         setLockAmount(5);
         setAttachUrl("");
+        setAttachType("");
+        setAttachName("");
       }
     } catch (err) {
       console.error("Failed to send message:", err);
@@ -577,14 +625,43 @@ export default function MessagesClient({
 
             {/* Input field actions */}
             <form onSubmit={handleSend} className="p-4 bg-black/40 backdrop-blur-2xl border-t border-white/5 space-y-3 relative z-20 shadow-[0_-8px_32px_rgba(0,0,0,0.4)]">
-              {/* Media URL attachment field */}
-              {attachUrl !== "" && (
-                <div className="p-2.5 bg-white/5 border border-white/10 rounded-xl flex items-center justify-between text-xs backdrop-blur-md">
-                  <span className="truncate text-text-muted font-medium">{attachUrl}</span>
+              {/* Media Uploading Spinner preview */}
+              {uploading && (
+                <div className="p-3 bg-white/5 border border-white/10 rounded-xl flex items-center gap-3 text-xs backdrop-blur-md animate-pulse">
+                  <div className="w-5 h-5 rounded-full border-2 border-primary/20 border-t-primary animate-spin" />
+                  <span className="text-text-muted font-medium">Uploading attachment...</span>
+                </div>
+              )}
+
+              {/* Dynamic Image & Media Preview panels */}
+              {attachUrl !== "" && !uploading && (
+                <div className="p-3 bg-white/5 border border-white/10 rounded-xl flex items-center justify-between text-xs backdrop-blur-md relative overflow-hidden group shadow-lg">
+                  <div className="flex items-center gap-3">
+                    {attachType === "image" ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img 
+                        src={attachUrl} 
+                        alt="Preview" 
+                        className="w-12 h-12 rounded-lg object-cover border border-white/10" 
+                      />
+                    ) : (
+                      <div className="w-12 h-12 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-primary font-bold text-[10px]">
+                        {attachType === "video" ? "MP4 Video" : "AUD Audio"}
+                      </div>
+                    )}
+                    <div>
+                      <p className="font-bold text-white truncate max-w-[200px] md:max-w-md">{attachName || "Attachment File"}</p>
+                      <p className="text-[10px] text-text-muted mt-0.5 capitalize">{attachType} File</p>
+                    </div>
+                  </div>
                   <button
                     type="button"
-                    onClick={() => setAttachUrl("")}
-                    className="text-red-400 font-semibold hover:text-red-300 transition-colors px-2.5 py-1 hover:bg-white/5 rounded-lg"
+                    onClick={() => {
+                      setAttachUrl("");
+                      setAttachType("");
+                      setAttachName("");
+                    }}
+                    className="text-red-400 font-semibold hover:text-red-300 transition-colors px-3 py-1.5 hover:bg-red-500/10 rounded-lg shrink-0 border border-transparent hover:border-red-500/20"
                   >
                     Remove
                   </button>
@@ -592,15 +669,21 @@ export default function MessagesClient({
               )}
 
               <div className="flex gap-3 items-center">
-                {/* Simulated file attachments */}
+                {/* Hidden Native File Input Element */}
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileChange}
+                  accept="image/*,video/*,audio/*"
+                  className="hidden"
+                />
+
+                {/* Native file upload trigger button */}
                 <button
                   type="button"
-                  onClick={() => {
-                    const url = prompt("Enter simulated image URL attachment:");
-                    if (url) setAttachUrl(url);
-                  }}
+                  onClick={() => fileInputRef.current?.click()}
                   className="p-2.5 text-text-muted hover:text-white rounded-full bg-white/5 hover:bg-white/10 hover:scale-105 active:scale-95 transition-all shrink-0 border border-white/5"
-                  title="Simulate Media Upload"
+                  title="Upload Media Attachment"
                 >
                   <ImageIcon className="w-5 h-5" />
                 </button>
