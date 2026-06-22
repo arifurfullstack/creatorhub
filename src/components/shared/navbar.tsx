@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useSession, signOut } from "@/lib/auth-client";
 import { getUnreadNotificationsCount } from "@/app/actions/notification";
 import { getCreatorUsername } from "@/app/actions/creator";
+import { getUnreadMessagesCount } from "@/app/actions/message";
 import {
   Menu,
   X,
@@ -41,6 +42,7 @@ export default function Navbar({ logoText = "CREATORHUB", defaultTheme = "dark" 
   const [theme, setTheme] = useState<"dark" | "light">("dark");
   const [mounted, setMounted] = useState(false);
   const [unreadCount, setUnreadCount] = useState<number>(0);
+  const [unreadMessagesCount, setUnreadMessagesCount] = useState<number>(0);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [creatorUsername, setCreatorUsername] = useState<string | null>(null);
 
@@ -97,25 +99,30 @@ export default function Navbar({ logoText = "CREATORHUB", defaultTheme = "dark" 
     }
   }, [defaultTheme]);
 
-  // Fetch unread notifications count with periodic updates
+  // Fetch unread counts with periodic updates
   useEffect(() => {
     setDropdownOpen(false); // Close dropdown on navigation/path changes
     if (!session?.user?.id) {
       setUnreadCount(0);
+      setUnreadMessagesCount(0);
       return;
     }
-    const fetchUnreadCount = async () => {
+    const fetchUnreadCounts = async () => {
       try {
-        const count = await getUnreadNotificationsCount();
-        setUnreadCount(count);
+        const [notiCount, msgCount] = await Promise.all([
+          getUnreadNotificationsCount(),
+          getUnreadMessagesCount(),
+        ]);
+        setUnreadCount(notiCount);
+        setUnreadMessagesCount(msgCount);
       } catch (err) {
-        console.error("Error fetching unread count:", err);
+        console.error("Error fetching unread counts:", err);
       }
     };
 
-    fetchUnreadCount();
+    fetchUnreadCounts();
 
-    const interval = setInterval(fetchUnreadCount, 15000); // poll every 15 seconds
+    const interval = setInterval(fetchUnreadCounts, 15000); // poll every 15 seconds
     return () => clearInterval(interval);
   }, [session, pathname]);
 
@@ -233,6 +240,11 @@ export default function Navbar({ logoText = "CREATORHUB", defaultTheme = "dark" 
                     )}
                     <Icon className="w-3.5 h-3.5 shrink-0 relative z-10" />
                     <span className="relative z-10">{link.label}</span>
+                    {link.href === "/messages" && unreadMessagesCount > 0 && (
+                      <span className="absolute -top-1 -right-1 flex h-4 min-w-[16px] px-1 items-center justify-center rounded-full bg-rose-500 text-[8px] font-black text-white ring-2 ring-[#09090b] shadow-[0_0_8px_rgba(244,63,94,0.6)] animate-pulse z-20">
+                        {unreadMessagesCount > 99 ? "99+" : unreadMessagesCount}
+                      </span>
+                    )}
                   </Link>
                 );
               })}
@@ -427,10 +439,17 @@ export default function Navbar({ logoText = "CREATORHUB", defaultTheme = "dark" 
                           <Link
                             href="/messages"
                             onClick={() => setDropdownOpen(false)}
-                            className="flex items-center gap-3 px-3.5 py-2.5 text-xs text-text-muted hover:text-foreground hover:bg-muted rounded-xl transition-all font-semibold animate-fadeIn"
+                            className="flex justify-between items-center px-3.5 py-2.5 text-xs text-text-muted hover:text-foreground hover:bg-muted rounded-xl transition-all font-semibold animate-fadeIn"
                           >
-                            <MessageSquare className="w-4 h-4 shrink-0 text-text-muted" />
-                            Direct Messages
+                            <div className="flex items-center gap-3">
+                              <MessageSquare className="w-4 h-4 shrink-0 text-text-muted" />
+                              <span>Direct Messages</span>
+                            </div>
+                            {unreadMessagesCount > 0 && (
+                              <span className="px-1.5 py-0.5 rounded-full bg-rose-500 text-[8px] font-black text-white shadow-[0_0_6px_rgba(244,63,94,0.4)] animate-pulse">
+                                {unreadMessagesCount}
+                              </span>
+                            )}
                           </Link>
 
                           {/* Separator & Logout */}
@@ -560,14 +579,21 @@ export default function Navbar({ logoText = "CREATORHUB", defaultTheme = "dark" 
                   key={link.href}
                   href={link.href}
                   onClick={() => setMobileMenuOpen(false)}
-                  className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+                  className={`flex justify-between items-center px-4 py-2.5 rounded-xl text-sm font-semibold transition-all ${
                     isActive
                       ? "bg-primary text-white"
                       : "text-text-muted hover:text-foreground hover:bg-muted"
                   }`}
                 >
-                  <Icon className="w-4 h-4 shrink-0" />
-                  {link.label}
+                  <div className="flex items-center gap-3">
+                    <Icon className="w-4 h-4 shrink-0" />
+                    <span>{link.label}</span>
+                  </div>
+                  {link.href === "/messages" && unreadMessagesCount > 0 && (
+                    <span className="px-2 py-0.5 rounded-full bg-rose-500 text-[10px] font-black text-white ring-2 ring-background shadow-[0_0_8px_rgba(244,63,94,0.6)] animate-pulse">
+                      {unreadMessagesCount}
+                    </span>
+                  )}
                 </Link>
               );
             })}

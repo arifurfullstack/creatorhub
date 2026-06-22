@@ -180,3 +180,22 @@ export async function unlockMessage(messageId: string) {
     messageId: updatedMessage.id,
   };
 }
+
+export async function getUnreadMessagesCount() {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+
+  if (!session) {
+    return 0;
+  }
+
+  const count = await prisma.message.count({
+    where: {
+      receiverId: session.user.id,
+      isRead: false,
+    },
+  });
+
+  return count;
+}
