@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Compass, Shield, Zap, Sparkles, MessageSquare, CreditCard, Search, ArrowRight, Star } from "lucide-react";
 import { motion } from "framer-motion";
+import { getFeaturedCreatorsList } from "@/app/actions/creator";
 
 export default function Home() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -54,6 +55,18 @@ export default function Home() {
       isVerified: false,
     },
   ];
+
+  const [creators, setCreators] = useState(mockCreators);
+
+  useEffect(() => {
+    getFeaturedCreatorsList()
+      .then((data) => {
+        if (data && data.length > 0) {
+          setCreators(data);
+        }
+      })
+      .catch(console.error);
+  }, []);
 
   const features = [
     {
@@ -318,7 +331,7 @@ export default function Home() {
           variants={staggerContainer}
           className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6"
         >
-          {mockCreators.map((creator) => (
+          {creators.map((creator) => (
             <motion.div
               key={creator.id}
               variants={fadeInUpVariants}
