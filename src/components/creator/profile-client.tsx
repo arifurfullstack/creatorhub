@@ -484,7 +484,7 @@ export default function ProfileClient({ creator }: { creator: CreatorProfileData
                       {isFollowing ? "Following" : "Follow Profile"}
                     </button>
                     <Link
-                      href={`/messages?chat=${creator.id}`}
+                      href={`/messages?chat=${creator.userId}`}
                       className="px-6 py-2.5 bg-foreground/[0.04] hover:bg-foreground/[0.08] text-white border border-white/10 rounded-xl text-xs font-black transition-all flex items-center gap-1.5"
                     >
                       <Send className="w-3.5 h-3.5 text-text-muted" />
