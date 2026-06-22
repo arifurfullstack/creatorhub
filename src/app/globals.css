@@ -120,13 +120,21 @@ body, nav, div, header, aside, main, table, tr, td, th, input, textarea, select,
 }
 
 /* Light Mode inputs & forms fields */
-.light input:not(.bg-transparent),
+.light input:not(.bg-transparent):not([type="range"]),
 .light textarea:not(.bg-transparent),
 .light select:not(.bg-transparent) {
   color: var(--foreground) !important;
   background-color: var(--card) !important;
   border-color: var(--border) !important;
 }
+
+/* Reset Plyr range inputs to bypass global light mode overrides */
+.light .plyr input[type="range"] {
+  background-color: transparent !important;
+  border: none !important;
+  color: inherit !important;
+}
+
 
 .light input.bg-transparent,
 .light textarea.bg-transparent,

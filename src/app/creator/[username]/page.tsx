@@ -1,6 +1,8 @@
 import { prisma } from "@/lib/db";
 import { notFound } from "next/navigation";
 import ProfileClient from "@/components/creator/profile-client";
+import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
 
 interface PageProps {
   params: Promise<{ username: string }>;
@@ -8,6 +10,10 @@ interface PageProps {
 
 export default async function CreatorProfilePage({ params }: PageProps) {
   const { username } = await params;
+
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
 
   const creator = await prisma.creatorProfile.findUnique({
     where: { username: username.toLowerCase() },
@@ -38,6 +44,19 @@ export default async function CreatorProfilePage({ params }: PageProps) {
 
   if (!creator) {
     notFound();
+  }
+
+  let isFollowing = false;
+  if (session?.user) {
+    const follow = await prisma.follow.findUnique({
+      where: {
+        userId_creatorProfileId: {
+          userId: session.user.id,
+          creatorProfileId: creator.id,
+        },
+      },
+    });
+    isFollowing = !!follow;
   }
 
   // Serialize Prisma Date objects to strings for Client Component usage
@@ -84,5 +103,5 @@ export default async function CreatorProfilePage({ params }: PageProps) {
     })),
   };
 
-  return <ProfileClient creator={serializedCreator} />;
+  return <ProfileClient creator={serializedCreator} initialIsFollowing={isFollowing} />;
 }

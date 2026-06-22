@@ -35,6 +35,7 @@ import {
   Lock,
   Star,
 } from "lucide-react";
+import VideoPlayer from "@/components/shared/video-player";
 
 interface Plan {
   id: string;
@@ -690,11 +691,7 @@ export default function CreatorDashboardClient({
 
                         {mediaFileType === "video" && (
                           <div className="relative aspect-video rounded-xl overflow-hidden bg-black">
-                            <video
-                              src={postMediaUrl}
-                              controls
-                              className="w-full h-full object-contain"
-                            />
+                            <VideoPlayer src={postMediaUrl} />
                           </div>
                         )}
 

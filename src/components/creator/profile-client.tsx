@@ -37,6 +37,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { useDropzone } from "react-dropzone";
 import ImageLightbox from "@/components/shared/image-lightbox";
+import VideoPlayer from "@/components/shared/video-player";
 
 interface PostMedia {
   id: string;
@@ -109,7 +110,13 @@ interface CommentEntry {
   date: string;
 }
 
-export default function ProfileClient({ creator }: { creator: CreatorProfileData }) {
+export default function ProfileClient({
+  creator,
+  initialIsFollowing = false,
+}: {
+  creator: CreatorProfileData;
+  initialIsFollowing?: boolean;
+}) {
   const { data: sessionData } = useSession();
   const [activeTab, setActiveTab] = useState<"posts" | "media" | "plans" | "about" | "portfolio">("posts");
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
@@ -204,7 +211,7 @@ export default function ProfileClient({ creator }: { creator: CreatorProfileData
   };
   
   // Simulated Interactive States
-  const [isFollowing, setIsFollowing] = useState(false);
+  const [isFollowing, setIsFollowing] = useState(initialIsFollowing);
   const [followers, setFollowers] = useState(creator.followerCount);
   const [purchasedPosts, setPurchasedPosts] = useState<string[]>([]);
   const [subscribedPlans, setSubscribedPlans] = useState<string[]>([]);
@@ -243,15 +250,40 @@ export default function ProfileClient({ creator }: { creator: CreatorProfileData
   }, [creator.posts]);
 
   // Simulation handlers
-  const handleFollow = () => {
-    if (isFollowing) {
-      setFollowers((prev) => prev - 1);
-      toast.info("You unfollowed this creator");
-    } else {
-      setFollowers((prev) => prev + 1);
-      toast.success("You followed this creator!");
+  const handleFollow = async () => {
+    if (!sessionData?.user) {
+      toast.error("You must be logged in to follow a creator");
+      return;
     }
-    setIsFollowing(!isFollowing);
+
+    const nextState = !isFollowing;
+    setIsFollowing(nextState);
+    setFollowers((prev) => (nextState ? prev + 1 : prev - 1));
+
+    try {
+      const { followCreator, unfollowCreator } = await import("@/app/actions/fan");
+      if (isFollowing) {
+        const res = await unfollowCreator(creator.id);
+        if (res.success) {
+          toast.info(`You unfollowed ${creator.displayName}`);
+        } else {
+          throw new Error("Failed to unfollow");
+        }
+      } else {
+        const res = await followCreator(creator.id);
+        if (res.success) {
+          toast.success(`You followed ${creator.displayName}!`);
+        } else {
+          throw new Error("Failed to follow");
+        }
+      }
+    } catch (err) {
+      // Revert optimistic update
+      setIsFollowing(isFollowing);
+      setFollowers((prev) => (isFollowing ? prev + 1 : prev - 1));
+      const errMsg = err instanceof Error ? err.message : "An error occurred";
+      toast.error(errMsg);
+    }
   };
 
   const handleSubscribe = (planId: string, planName: string) => {
@@ -665,7 +697,7 @@ export default function ProfileClient({ creator }: { creator: CreatorProfileData
                             {post.media.map((med) => (
                               <div key={med.id} className="relative w-full h-full bg-[#0a0a0c] flex items-center justify-center overflow-hidden">
                                 {med.type === "video" ? (
-                                  <video src={med.url} controls className="w-full object-contain max-h-[400px]" />
+                                  <VideoPlayer src={med.url} />
                                 ) : med.type === "audio" ? (
                                   <div className="p-4 w-full bg-white/[0.02] flex flex-col gap-2">
                                     <div className="flex items-center gap-2 text-xs font-bold text-white"><Volume2 className="w-4 h-4 text-primary animate-pulse" /> Audio Track</div>
@@ -1187,11 +1219,9 @@ export default function ProfileClient({ creator }: { creator: CreatorProfileData
               {/* Left Column (70%): Media Container */}
               <div className="md:w-3/5 bg-black flex items-center justify-center relative overflow-hidden h-1/2 md:h-full">
                 {selectedMediaPost.media[0]?.type === "video" ? (
-                  <video 
-                    src={selectedMediaPost.media[0].url} 
-                    controls 
-                    className="w-full h-full object-contain"
-                  />
+                  <div className="w-full h-full flex items-center justify-center p-4">
+                    <VideoPlayer src={selectedMediaPost.media[0].url} />
+                  </div>
                 ) : (
                   <div 
                     className="w-full h-full cursor-zoom-in flex items-center justify-center"

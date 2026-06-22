@@ -77,10 +77,12 @@ export default function FeedClient({
   initialPosts,
   sessionUser,
   recommendedCreators,
+  initialFollowedCreatorIds = [],
 }: {
   initialPosts: Post[];
   sessionUser: any;
   recommendedCreators: RecommendedCreator[];
+  initialFollowedCreatorIds?: string[];
 }) {
   const router = useRouter();
   const [posts, setPosts] = useState<Post[]>(initialPosts);
@@ -93,7 +95,7 @@ export default function FeedClient({
   const [likedPosts, setLikedPosts] = useState<string[]>([]);
   const [bookmarkedPosts, setBookmarkedPosts] = useState<string[]>([]);
   const [unlockedPosts, setUnlockedPosts] = useState<string[]>([]);
-  const [followedCreators, setFollowedCreators] = useState<string[]>([]);
+  const [followedCreators, setFollowedCreators] = useState<string[]>(initialFollowedCreatorIds);
 
   // Lightbox States
   const [lightboxOpen, setLightboxOpen] = useState(false);
@@ -264,11 +266,47 @@ export default function FeedClient({
     }
   };
 
-  const handleToggleFollow = (creatorId: string) => {
-    if (followedCreators.includes(creatorId)) {
+  const handleToggleFollow = async (creatorId: string, displayName: string) => {
+    if (!sessionUser) {
+      toast.error("You must be logged in to follow a creator");
+      return;
+    }
+
+    const isCurrentlyFollowing = followedCreators.includes(creatorId);
+
+    // Optimistic update
+    if (isCurrentlyFollowing) {
       setFollowedCreators(followedCreators.filter((id) => id !== creatorId));
     } else {
       setFollowedCreators([...followedCreators, creatorId]);
+    }
+
+    try {
+      const { followCreator, unfollowCreator } = await import("@/app/actions/fan");
+      if (isCurrentlyFollowing) {
+        const res = await unfollowCreator(creatorId);
+        if (res.success) {
+          toast.info(`You unfollowed ${displayName}`);
+        } else {
+          throw new Error("Failed to unfollow");
+        }
+      } else {
+        const res = await followCreator(creatorId);
+        if (res.success) {
+          toast.success(`You followed ${displayName}!`);
+        } else {
+          throw new Error("Failed to follow");
+        }
+      }
+    } catch (err) {
+      // Revert optimistic update
+      if (isCurrentlyFollowing) {
+        setFollowedCreators((prev) => [...prev, creatorId]);
+      } else {
+        setFollowedCreators((prev) => prev.filter((id) => id !== creatorId));
+      }
+      const errMsg = err instanceof Error ? err.message : "An error occurred";
+      toast.error(errMsg);
     }
   };
 
@@ -877,7 +915,7 @@ export default function FeedClient({
                     </div>
 
                     <button
-                      onClick={() => handleToggleFollow(creator.id)}
+                      onClick={() => handleToggleFollow(creator.id, creator.displayName)}
                       className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase transition-all shrink-0 cursor-pointer ${
                         isFollowing
                           ? "bg-white/5 text-text-muted hover:text-white"

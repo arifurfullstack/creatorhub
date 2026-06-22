@@ -64,6 +64,68 @@ export async function cancelFanSubscription(subscriptionId: string) {
   return { success: true, subscription: updatedSubscription };
 }
 
+export async function followCreator(creatorProfileId: string) {
+  const session = await verifySession();
+
+  const creator = await prisma.creatorProfile.findUnique({
+    where: { id: creatorProfileId },
+    select: { userId: true, displayName: true, username: true },
+  });
+
+  if (!creator) {
+    throw new Error("Creator profile not found");
+  }
+
+  if (creator.userId === session.user.id) {
+    throw new Error("You cannot follow your own profile");
+  }
+
+  const existingFollow = await prisma.follow.findUnique({
+    where: {
+      userId_creatorProfileId: {
+        userId: session.user.id,
+        creatorProfileId,
+      },
+    },
+  });
+
+  if (existingFollow) {
+    return { success: true };
+  }
+
+  await prisma.$transaction([
+    prisma.follow.create({
+      data: {
+        userId: session.user.id,
+        creatorProfileId,
+      },
+    }),
+    prisma.creatorProfile.update({
+      where: { id: creatorProfileId },
+      data: {
+        followerCount: {
+          increment: 1,
+        },
+      },
+    }),
+    prisma.notification.create({
+      data: {
+        userId: creator.userId,
+        type: "new_follower",
+        title: "New Follower",
+        content: `${session.user.name || "A fan"} is now following you`,
+        link: `/creator/${creator.username}`,
+      },
+    }),
+  ]);
+
+  revalidatePath("/dashboard/fan");
+  revalidatePath(`/creator/${creator.username}`);
+  revalidatePath("/feed");
+
+  return { success: true };
+}
+
 export async function unfollowCreator(creatorProfileId: string) {
   const session = await verifySession();
 

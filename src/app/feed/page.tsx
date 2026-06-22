@@ -82,12 +82,27 @@ export default async function FeedPage() {
     },
   }));
 
+  // Query followed creator IDs if logged in
+  let followedCreatorIds: string[] = [];
+  if (session?.user) {
+    const follows = await prisma.follow.findMany({
+      where: {
+        userId: session.user.id,
+      },
+      select: {
+        creatorProfileId: true,
+      },
+    });
+    followedCreatorIds = follows.map((f) => f.creatorProfileId);
+  }
+
   return (
     <div className="min-h-screen bg-transparent">
       <FeedClient
         initialPosts={serializedPosts}
         sessionUser={session?.user || null}
         recommendedCreators={serializedRecommended}
+        initialFollowedCreatorIds={followedCreatorIds}
       />
     </div>
   );
